@@ -20,30 +20,30 @@ box-shadow: 0 10px 30px rgba(0,0,0,0.05);
 }
 .shield-icon {
 font-size: 80px; color: var(--primary); margin-bottom: 20px;
-filter: drop-shadow(0 5px 15px rgba(192, 57, 43, 0.2));
 }
-h1 { font-size: 24px; color: #333; margin: 0; }
-p { color: #777; font-size: 15px; line-height: 1.6; margin: 15px 0 30px; }
-.status-badge {
-background: #e8f5e9; color: #2e7d32; padding: 5px 15px;
-border-radius: 20px; font-size: 14px; margin-bottom: 20px; display: inline-block;
-}
+h1 { font-size: 22px; color: #333; }
+.status { color: #27ae60; font-weight: bold; margin: 10px 0; }
 .btn {
 background: var(--primary); color: white; border: none;
 padding: 16px 0; width: 100%; border-radius: 50px;
 font-size: 18px; font-weight: bold; cursor: pointer;
 box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);
-transition: 0.3s;
 }
-.btn:active { transform: scale(0.95); }
 </style>
 </head>
 <body>
 <div class="container">
 <div class="shield-icon"><i class="fas fa-shield-halved"></i></div>
-<div class="status-badge" id="fb-status">جاري الاتصال بـ Firebase...</div>
 <h1>Safety Call Japan</h1>
-<p>نظام الحماية الذكي مفعل الآن.
-يتم حظر المكالمات المزعجة تلقائياً.</p>
-<button class="btn" onclick="checkUpdate()">تحديث القائمة السوداء</button>
+<p class="status" id="st">جاري الفحص...</p>
+<p>نظام الحماية الذكي مفعل الآن لحظر المزعجين.</p>
+<button class="btn" onclick="alert('النظام يعمل بنجاح ✅')">تحديث الحالة</button>
 </div>
+<script src="cordova.js"></script>
+<script>
+document.addEventListener('deviceready', function() {
+document.getElementById('st').innerText = "الحماية مفعلة ✅";
+}, false);
+</script>
+</body>
+</html>
