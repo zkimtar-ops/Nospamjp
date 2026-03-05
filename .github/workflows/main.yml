@@ -44,11 +44,12 @@ jobs:
           # 5. قبول تراخيص الأندرويد
           yes | sdkmanager --licenses || true
 
-          # 6. إضافة المنصة (تحديث إلى 14 لحل مشكلة الفيرباس)
-          cordova platform add android@14.1.0
+          # 6. إضافة المنصة (الإصدار المستقر 13)
+          cordova platform add android@13.0.0
           
-          # 7. إضافة الإضافات بأسماء صحيحة وإصدارات متوافقة
-          cordova plugin add cordova-plugin-firebasex
+          # 7. إضافة الإضافات بإصدارات متوافقة مع أندرويد 13
+          # استخدمنا إصدار 16.1.0 لـ firebasex لأنه الأكثر استقراراً مع أندرويد 13
+          cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add cordova-plugin-android-permissions
           
