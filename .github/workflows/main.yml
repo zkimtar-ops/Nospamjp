@@ -1,4 +1,4 @@
-name: Safety_Japan_Build_Final_v8
+name: Safety_Japan_Build_Final_v9
 
 on:
   push:
@@ -12,11 +12,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -25,17 +26,16 @@ jobs:
         run: |
           npm install -g cordova
           
-          # إنشاء المشروع
+          # 1. إنشاء المشروع وتجهيز الملفات
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # نقل ملفاتك
+          # نسخ ملفاتك إلى مجلد المشروع
           rm -rf myapp/www/*
           cp -r www/* myapp/www/
           cp config.xml myapp/config.xml
-          
-          # نسخ ملف الفيرباس إذا وجد
           [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
 
+          # 2. الدخول لمجلد المشروع لتنفيذ كافة العمليات بداخله
           cd myapp
 
           # قبول التراخيص
@@ -47,20 +47,20 @@ jobs:
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add cordova-plugin-android-permissions
 
-          # إنشاء المفتاح
+          # 3. إنشاء مفتاح التوقيع داخل المجلد
           keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyJapan" -deststoretype pkcs12
 
-          # إنشاء ملف البناء بطريقة الـ echo لتجنب خطأ الملف المفقود
-          echo '{ "android": { "release": { "keystore": "release.jks", "storePassword": "123456", "alias": "safety_key", "password": "123456" } } }' > build.json
+          # 4. إنشاء ملف build.json في المكان الصحيح (داخل myapp)
+          echo '{"android": {"release": {"keystore": "release.jks", "storePassword": "123456", "alias": "safety_key", "password": "123456"}}}' > build.json
 
-          # بناء ملف APK
+          # 5. البناء النهائي
           cordova build android --release --buildConfig=build.json -- --packageType=apk
 
-          # نقل الملف للتحميل
-          cp platforms/android/app/build/outputs/apk/release/*.apk ../SafetyCall.apk
+          # نقل الملف النهائي للخارج للتحميل
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../SafetyCall_Final.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Safety-Call-Japan-APK
-          path: SafetyCall.apk
+          path: SafetyCall_Final.apk
