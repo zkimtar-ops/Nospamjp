@@ -1,0 +1,11 @@
+{
+  "android": {
+    "release": {
+      "keystore": "release.jks",
+      "storePassword": "123456",
+      "alias": "safety_key",
+      "password": "123456",
+      "keystoreType": ""
+    }
+  }
+}
