@@ -27,15 +27,14 @@ jobs:
           npm install -g cordova
           
           # 2. إنشاء مشروع مؤقت لضمان هيكلية سليمة
-          # ملاحظة: سيتم أخذ الـ Package ID من ملف config.xml الخاص بك تلقائياً
-          cordova create myapp com.placeholder.id "Safety Japan"
+          cordova create myapp com.nospam.japan "Safety Call Japan"
           
           # 3. نسخ ملفاتك أنت إلى المشروع
           rm -rf myapp/www/*
           cp -r www/* myapp/www/
           cp config.xml myapp/config.xml
           
-          # 4. نسخ ملف الفيرباس (مهم جداً للاتصال)
+          # 4. نسخ ملف الفيرباس
           if [ -f "google-services.json" ]; then
             cp google-services.json myapp/google-services.json
           fi
@@ -45,16 +44,18 @@ jobs:
           # 5. قبول تراخيص الأندرويد
           yes | sdkmanager --licenses || true
 
-          # 6. إضافة المنصة والإضافات المطلوبة للفيرباس والحماية
-          cordova platform add android@13.0.0
+          # 6. إضافة المنصة (تحديث إلى 14 لحل مشكلة الفيرباس)
+          cordova platform add android@14.1.0
+          
+          # 7. إضافة الإضافات بأسماء صحيحة وإصدارات متوافقة
           cordova plugin add cordova-plugin-firebasex
           cordova plugin add cordova-plugin-androidx-adapter
-          cordova plugin add cordova-plugin-permissions
+          cordova plugin add cordova-plugin-android-permissions
           
-          # 7. إنشاء مفتاح التوقيع
+          # 8. إنشاء مفتاح التوقيع
           keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyJapan" -deststoretype pkcs12
 
-          # 8. ملف إعدادات البناء (طريقتك المحترفة في V6)
+          # 9. ملف إعدادات البناء
           cat <<EOF > build.json
           {
               "android": {
@@ -68,14 +69,14 @@ jobs:
           }
           EOF
 
-          # 9. بناء APK و AAB
+          # 10. بناء APK و AAB
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           cordova build android --release --buildConfig=build.json -- --packageType=bundle
 
-          # 10. تنظيم المخرجات للتحميل
+          # 11. تنظيم المخرجات للتحميل
           mkdir -p ../output
-          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/Safety_Japan_Final.apk
-          cp platforms/android/app/build/outputs/bundle/release/*.aab ../output/Safety_Japan_Final.aab
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/Safety_Japan_Final.apk \;
+          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ../output/Safety_Japan_Final.aab \;
           cp release.jks ../output/safety_release.jks
 
       - name: Upload Artifacts
