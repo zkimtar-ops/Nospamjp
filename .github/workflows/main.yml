@@ -69,15 +69,15 @@ jobs:
             }
           }" > build.json
 
-          # 8. بناء الـ APK أولاً واستخراجه
+          # 8. بناء الـ APK واستخراجه باستخدام المسار المباشر للمخرجات
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
-          find . -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_PACKAGE/SafetyCall_Install.apk \;
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_PACKAGE/SafetyCall_Install.apk \;
 
-          # 9. بناء الـ AAB ثانياً واستخراجه
+          # 9. بناء الـ AAB واستخراجه باستخدام المسار المباشر للمخرجات
           echo "Building AAB..."
           cordova build android --release --buildConfig=build.json -- --packageType=bundle
-          find . -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_PACKAGE/SafetyCall_PlayStore.aab \;
+          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_PACKAGE/SafetyCall_PlayStore.aab \;
 
       - name: Upload Safety Package
         uses: actions/upload-artifact@v4
