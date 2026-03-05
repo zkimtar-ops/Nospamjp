@@ -1,4 +1,4 @@
-name: Safety_Call_Japan_Build
+name: Safety_Japan_Call_Fixed_V6
 
 on:
   push:
@@ -12,50 +12,68 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Build App with Cordova
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build and Sign Everything
         run: |
+          # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # إنشاء مشروع كوردوفا مؤقت
-          cordova create myapp com.zakaria.sosjapan "Safety Call Japan"
-          
-          # نقل ملفاتك إلى المشروع
-          rm -rf myapp/www/*
-          cp -r www/* myapp/www/
-          cp config.xml myapp/config.xml
-          
-          # نقل ملف Firebase (يجب أن ترفعه أنت في المجلد الرئيسي أولاً)
-          if [ -f "google-services.json" ]; then
-            cp google-services.json myapp/google-services.json
-          else
-            echo "تحذير: ملف google-services.json غير موجود، سيتم البناء بدونه."
-          fi
-          
-          cd myapp
-          cordova platform add android@13.0.0
-          
-          # إضافة الإضافات الضرورية
-          cordova plugin add cordova-plugin-firebasex
-          cordova plugin add cordova-plugin-statusbar
-          
-          # إنشاء مفتاح توقيع جديد
-          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
-          
-          # البدء في بناء الـ APK
-          cordova build android --release --device -- --keystore=release.jks --storePassword=123456 --alias=safety_key --password=123456 --packageType=apk
+          # 2. إعداد package.json
+          [ -f package.json ] || npm init -y
 
-          # تجهيز الملف للتحميل
-          cp platforms/android/app/build/outputs/apk/release/*.apk ../Safety_Call_Final.apk
+          # 3. قبول تراخيص الأندرويد
+          yes | sdkmanager --licenses || true
 
-      - name: Upload Final APK
+          # 4. بناء المنصة
+          cordova platform remove android --nosave || true
+          cordova platform add android@13.0.0 --save
+          
+          # تثبيت إضافات التوافق لحل مشاكل الانهيار
+          cordova plugin add cordova-plugin-androidx-adapter --save
+          cordova plugin add cordova-plugin-permissions --save
+          
+          # إزالة أي بقايا للسبلش قد تسبب خطأ عند البدء
+          cordova plugin remove cordova-plugin-splashscreen --save || true
+          
+          cordova prepare android
+
+          # 5. إنشاء مفتاح التوقيع
+          keytool -genkey -v -keystore safety_release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyJapan, C=JP" -deststoretype pkcs12
+
+          # 6. ملف إعدادات البناء
+          cat <<EOF > build.json
+          {
+              "android": {
+                  "release": {
+                      "keystore": "safety_release.jks",
+                      "storePassword": "123456",
+                      "alias": "safety_key",
+                      "password": "123456"
+                  }
+              }
+          }
+          EOF
+
+          # 7. بناء APK و AAB
+          cordova build android --release --buildConfig=build.json -- --packageType=apk
+          cordova build android --release --buildConfig=build.json -- --packageType=bundle
+
+          # 8. تنظيم المخرجات
+          mkdir -p output
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ./output/Safety_Japan_Call_Fixed.apk \;
+          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ./output/Safety_Japan_Call_Fixed.aab \;
+          cp safety_release.jks ./output/safety_release.jks
+
+      - name: Upload Final Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Japan-APK
-          path: Safety_Call_Final.apk
+          name: Fixed-Safety-Japan-Package
+          path: output/
