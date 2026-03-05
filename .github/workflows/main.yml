@@ -1,4 +1,4 @@
-name: Safety_Japan_Ultimate_Build
+name: Safety_Japan_Ultimate_Build_Final
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -21,40 +21,48 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Full Build Process
+      - name: Build and Sign Process
         run: |
           npm install -g cordova
           
-          # إنشاء المشروع
+          # 1. إنشاء المشروع
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # نسخ ملفاتك
+          # 2. نسخ ملفاتك داخل مجلد المشروع
           cp config.xml myapp/config.xml
-          cp -r www/* myapp/www/
+          cp index.html myapp/www/index.html
           [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
           
           cd myapp
           
-          # قبول التراخيص
+          # 3. قبول التراخيص وإضافة المنصة
           yes | sdkmanager --licenses || true
-          
-          # إضافة المنصة
           cordova platform add android@13.0.0
           
-          # إضافة الإضافات (بما في ذلك إضافة الصلاحيات للمطالبة بها داخل التطبيق)
+          # 4. إضافة الإضافات
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-androidx-adapter
           
-          # إنشاء مفتاح التوقيع
-          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
+          # 5. إنشاء مفتاح التوقيع واستخدام مسار مطلق لتجنب ضياعه
+          keytool -genkey -v -keystore $(pwd)/release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
           
-          # إعداد ملف البناء
-          echo '{"android": {"release": {"keystore": "release.jks", "storePassword": "123456", "alias": "safety_key", "password": "123456"}}}' > build.json
+          # 6. إنشاء ملف build.json باستخدام المسار المطلق للمفتاح
+          echo "{
+            \"android\": {
+              \"release\": {
+                \"keystore\": \"$(pwd)/release.jks\",
+                \"storePassword\": \"123456\",
+                \"alias\": \"safety_key\",
+                \"password\": \"123456\"
+              }
+            }
+          }" > build.json
 
-          # بناء التطبيق APK
-          cordova build android --release --buildConfig=build.json -- --packageType=apk
+          # 7. بناء التطبيق مع توضيح المسار الكامل للملف (هذا هو الحل)
+          cordova build android --release --buildConfig=$(pwd)/build.json -- --packageType=apk
           
+          # 8. استخراج الملف النهائي
           mkdir -p ../output
           cp platforms/android/app/build/outputs/apk/release/*.apk ../output/SafetyCall_Pro.apk
 
