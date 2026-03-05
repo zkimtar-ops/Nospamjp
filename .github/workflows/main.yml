@@ -1,4 +1,4 @@
-name: SOS_Japan_Complete_Build
+name: SOS_Japan_Complete_Build_Fixed
 
 on:
   push:
@@ -18,6 +18,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Full Production Build
         run: |
           npm install -g cordova
@@ -28,7 +31,7 @@ jobs:
           # 2. نقل ملفاتك
           cp config.xml myapp/config.xml
           mkdir -p myapp/www
-          cp -r www/* myapp/www/
+          if [ -d "www" ]; then cp -r www/* myapp/www/; else cp index.html myapp/www/index.html; fi
           [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
           
           cd myapp
@@ -37,26 +40,29 @@ jobs:
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
-          # 4. إضافة الإضافات (الأذونات والفيرباس)
+          # 4. إضافة الإضافات (مهمة جداً للصلاحيات والفيرباس - لن نحذفها)
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
           
           # 5. إنشاء مفتاح التوقيع
-          keytool -genkey -v -keystore $(pwd)/release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
+          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
           
           # 6. إعداد ملف البناء
-          echo "{\"android\": {\"release\": {\"keystore\": \"$(pwd)/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
+          echo "{\"android\": {\"release\": {\"keystore\": \"release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
-          # 7. البناء النهائي
-          cordova build android --release --buildConfig=$(pwd)/build.json -- --packageType=apk
+          # 7. البناء النهائي (APK)
+          cordova build android --release --buildConfig=build.json -- --packageType=apk
           
-          # 8. استخراج الملف (تعديل: البحث في كل مكان لتجنب خطأ No such file)
-          mkdir -p ../output
-          find . -name "*release.apk" -exec cp {} ../output/SafetyCall_Final.apk \;
+          # التأكد من وجود الملف للمعاينة في السجلات (للتصحيح فقط)
+          echo "Checking for APK files..."
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk"
 
       - name: Upload Final APK
         uses: actions/upload-artifact@v4
         with:
-          name: Final-Production-APK
-          path: output/SafetyCall_Final.apk
+          name: Safety-Call-Japan-APK
+          # هنا الحل: نستخدم البحث الشامل (Wildcard) داخل مجلد البناء مباشرة
+          # لضمان العثور عليه أينما كان
+          path: myapp/platforms/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
