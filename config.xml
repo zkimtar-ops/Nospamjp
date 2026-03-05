@@ -1,22 +1,19 @@
 <?xml version='1.0' encoding='utf-8'?>
 <widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Safety Call Japan</name>
-    <description>تطبيق حماية المكالمات المتقدم لليابان</description>
-    <author email="dev@zakaria.jp" href="https://safetycall.jp">Zakaria</author>
+    <description>Advanced Call Shield for Japan</description>
+    <author email="dev@nospam.jp">Zakaria</author>
     
     <content src="index.html" />
     
-    <!-- إعدادات الشاشة الكاملة وإخفاء الشريط العلوي -->
     <preference name="Fullscreen" value="true" />
     <preference name="StatusBarOverlaysWebview" value="true" />
-    <preference name="ScrollEnabled" value="false" />
     <preference name="BackgroundColor" value="0xffffffff" />
 
     <platform name="android">
-        <!-- ربط ملف Firebase داخل التطبيق -->
         <resource-file src="google-services.json" target="app/google-services.json" />
-        <preference name="KeepRunning" value="true" />
         <preference name="AndroidXEnabled" value="true" />
+        <preference name="KeepRunning" value="true" />
     </platform>
 
     <access origin="*" />
