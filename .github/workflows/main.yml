@@ -1,24 +1,66 @@
-<?xml version='1.0' encoding='utf-8'?>
-<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-    <name>Safety Call Japan</name>
-    <description>Advanced Call Shield for Japan</description>
-    <author email="dev@nospam.jp">Zakaria</author>
-    
-    <content src="index.html" />
-    
-    <preference name="Fullscreen" value="true" />
-    <preference name="StatusBarOverlaysWebview" value="true" />
-    <preference name="BackgroundColor" value="0xffffffff" />
+name: Safety_Japan_Build_Final_v8
 
-    <platform name="android">
-        <resource-file src="google-services.json" target="app/google-services.json" />
-        <preference name="AndroidXEnabled" value="true" />
-        <preference name="KeepRunning" value="true" />
-    </platform>
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
-    <access origin="*" />
-    <allow-intent href="http://*/*" />
-    <allow-intent href="https://*/*" />
-    <allow-intent href="tel:*" />
-    <allow-intent href="sms:*" />
-</widget>
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build App
+        run: |
+          npm install -g cordova
+          
+          # إنشاء المشروع
+          cordova create myapp com.nospam.japan "Safety Call Japan"
+          
+          # نقل ملفاتك
+          rm -rf myapp/www/*
+          cp -r www/* myapp/www/
+          cp config.xml myapp/config.xml
+          
+          # نسخ ملف الفيرباس إذا وجد
+          [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
+
+          cd myapp
+
+          # قبول التراخيص
+          yes | sdkmanager --licenses || true
+
+          # إضافة المنصة والإضافات
+          cordova platform add android@13.0.0
+          cordova plugin add cordova-plugin-firebasex@16.1.0
+          cordova plugin add cordova-plugin-androidx-adapter
+          cordova plugin add cordova-plugin-android-permissions
+
+          # إنشاء المفتاح
+          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyJapan" -deststoretype pkcs12
+
+          # إنشاء ملف البناء بطريقة الـ echo لتجنب خطأ الملف المفقود
+          echo '{ "android": { "release": { "keystore": "release.jks", "storePassword": "123456", "alias": "safety_key", "password": "123456" } } }' > build.json
+
+          # بناء ملف APK
+          cordova build android --release --buildConfig=build.json -- --packageType=apk
+
+          # نقل الملف للتحميل
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../SafetyCall.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Safety-Call-Japan-APK
+          path: SafetyCall.apk
