@@ -1,78 +1,62 @@
-name: Build Anshin Guard APK
+name: SOS_Japan_Complete_Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Build APK with Cordova
-      run: |
-        # 1. تثبيت كوردوفا
-        npm install -g cordova
-        
-        # 2. إنشاء مشروع كوردوفا مؤقت لنقل الهيكل (أو تحديث الحالي)
-        cordova create build_dir com.nospam.japan "Safety Call Japan"
-        cp config.xml build_dir/config.xml
-        cp -r www/* build_dir/www/
-        [ -f "google-services.json" ] && cp google-services.json build_dir/google-services.json
-        
-        cd build_dir
-        
-        # 3. قبول التراخيص وإضافة المنصة
-        yes | sdkmanager --licenses || true
-        cordova platform add android@13.0.0
-        
-        # 4. إضافة الإضافات (التي طلبتها للصلاحيات والفيرباس)
-        cordova plugin add cordova-plugin-firebasex@16.1.0
-        cordova plugin add cordova-plugin-android-permissions
-        cordova plugin add cordova-plugin-androidx-adapter
-        
-        # 5. إنشاء ملف التوقيع (release.jks) في المجلد الحالي
-        # هذا الأمر يحل مشكلة Keystore file does not exist
-        keytool -genkey -v \
-          -keystore release.jks \
-          -alias safety_key \
-          -keyalg RSA \
-          -keysize 2048 \
-          -validity 10000 \
-          -storepass 123456 \
-          -keypass 123456 \
-          -dname "CN=Zakaria, O=NoSpam Japan, C=JP" -deststoretype pkcs12
+      - name: Full Production Build
+        run: |
+          npm install -g cordova
+          
+          # 1. إنشاء المشروع
+          cordova create myapp com.nospam.japan "Safety Call Japan"
+          
+          # 2. نقل ملفاتك
+          cp config.xml myapp/config.xml
+          mkdir -p myapp/www
+          cp -r www/* myapp/www/
+          [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
+          
+          cd myapp
+          
+          # 3. قبول التراخيص وإضافة المنصة
+          yes | sdkmanager --licenses || true
+          cordova platform add android@13.0.0
+          
+          # 4. إضافة الإضافات (مهم جداً للصلاحيات والفيرباس)
+          cordova plugin add cordova-plugin-android-permissions
+          cordova plugin add cordova-plugin-firebasex@16.1.0
+          cordova plugin add cordova-plugin-androidx-adapter
+          
+          # 5. إنشاء مفتاح التوقيع
+          keytool -genkey -v -keystore $(pwd)/release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
+          
+          # 6. إعداد ملف البناء
+          echo "{\"android\": {\"release\": {\"keystore\": \"$(pwd)/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
-        # 6. إنشاء ملف build.json لربط المفتاح بالبناء
-        echo '{
-          "android": {
-            "release": {
-              "keystore": "release.jks",
-              "storePassword": "123456",
-              "alias": "safety_key",
-              "password": "123456"
-            }
-          }
-        }' > build.json
+          # 7. البناء النهائي
+          cordova build android --release --buildConfig=$(pwd)/build.json -- --packageType=apk
+          
+          # 8. استخراج الملف
+          mkdir -p ../output
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/SafetyCall_Final.apk \;
 
-        # 7. تشغيل البناء النهائي
-        cordova build android --release --buildConfig=build.json -- --packageType=apk
-
-        # 8. استخراج الملف للرفع
-        mkdir -p ../output
-        find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/Safety_Call_Japan.apk \;
-
-    - name: Upload Final APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: AnshinGuard-Production-APK
-        path: output/Safety_Call_Japan.apk
+      - name: Upload Final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Final-Production-APK
+          path: output/SafetyCall_Final.apk
