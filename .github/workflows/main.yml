@@ -1,4 +1,4 @@
-name: Safety_Japan_Final_Success_All_Files
+name: Safety_Japan_Ultimate_Success
 
 on:
   push:
@@ -18,53 +18,63 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build All
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build All Artifacts
         run: |
+          # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 1. إنشاء المفتاح في المجلد الرئيسي
+          # 2. إنشاء المفتاح الرقمي في المجلد الرئيسي
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.jks \
             -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass 123456 -keypass 123456 \
             -dname "CN=Zakaria" -deststoretype pkcs12
 
-          # 2. إنشاء المشروع
-          cordova create myapp com.nospam.japan "Safety Call Japan"
+          # 3. إنشاء مشروع في مجلد نظيف لتجنب أخطاء المسارات
+          cordova create build_project com.nospam.japan "Safety Call Japan"
           
-          # 3. نقل ملفاتك
-          cp config.xml myapp/config.xml
-          mkdir -p myapp/www
-          if [ -d "www" ]; then cp -r www/* myapp/www/; else cp index.html myapp/www/index.html; fi
-          [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
+          # 4. نسخ ملفاتك الأساسية للمشروع الجديد
+          cp config.xml build_project/config.xml
+          mkdir -p build_project/www
+          cp -r www/* build_project/www/
+          [ -f "google-services.json" ] && cp google-services.json build_project/google-services.json
           
-          # مجلد المخرجات النهائي
-          mkdir -p $GITHUB_WORKSPACE/FINAL_FILES
+          # مجلد لتجميع النتائج النهائية
+          mkdir -p $GITHUB_WORKSPACE/FINAL_OUTPUT
           
-          cd myapp
+          cd build_project
+          
+          # 5. التراخيص والمنصة والإضافات (تشمل إضافة Intent لفتح الإعدادات)
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
-          
-          # 4. تثبيت الإضافات (مهم جداً لظهور الأذونات)
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
+          cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 5. إعداد ملف البناء
+          # 6. إعداد التوقيع بمسار مطلق
           echo "{\"android\": {\"release\": {\"keystore\": \"$GITHUB_WORKSPACE/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
-          # 6. بناء APK
+          # 7. بناء APK
+          echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_FILES/SafetyCall.apk \;
-          
-          # 7. بناء AAB
+          # البحث عن أي ملف APK في المجلد الحالي ونقله للخزنة
+          find . -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_OUTPUT/SafetyCall.apk \;
+
+          # 8. بناء AAB
+          echo "Building AAB..."
           cordova build android --release --buildConfig=build.json -- --packageType=bundle
-          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_FILES/SafetyCall.aab \;
+          # البحث عن أي ملف AAB في المجلد الحالي ونقله للخزنة
+          find . -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_OUTPUT/SafetyCall.aab \;
 
-          # 8. نسخ المفتاح
-          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_FILES/safety_key.jks
+          # 9. نسخ المفتاح للخزنة
+          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_OUTPUT/safety_key.jks
 
-      - name: Upload Results
+      - name: Upload Everything
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Japan-Package
-          path: FINAL_FILES/
+          name: Safety-Call-Japan-Full-Package
+          path: FINAL_OUTPUT/
+          if-no-files-found: error
