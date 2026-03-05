@@ -1,4 +1,4 @@
-name: Safety_Japan_Build_Final_v9
+name: Safety_Japan_Build_Final_v10
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+          # تم إزالة السطر الخاص بالـ cache لأنه يسبب الخطأ الذي واجهته
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -50,7 +50,7 @@ jobs:
           # 3. إنشاء مفتاح التوقيع داخل المجلد
           keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyJapan" -deststoretype pkcs12
 
-          # 4. إنشاء ملف build.json في المكان الصحيح (داخل myapp)
+          # 4. إنشاء ملف build.json في المكان الصحيح
           echo '{"android": {"release": {"keystore": "release.jks", "storePassword": "123456", "alias": "safety_key", "password": "123456"}}}' > build.json
 
           # 5. البناء النهائي
