@@ -1,4 +1,4 @@
-name: Safety_Japan_Build_Final_v10
+name: SOS_Japan_Final_Build_Working
 
 on:
   push:
@@ -12,55 +12,54 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          # تم إزالة السطر الخاص بالـ cache لأنه يسبب الخطأ الذي واجهته
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build App
+      - name: Create and Build App
         run: |
+          # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 1. إنشاء المشروع وتجهيز الملفات
+          # 2. إنشاء المجلد الأساسي للتطبيق
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # نسخ ملفاتك إلى مجلد المشروع
-          rm -rf myapp/www/*
-          cp -r www/* myapp/www/
+          # 3. نسخ ملفاتك البرمجية داخل مجلد التطبيق
           cp config.xml myapp/config.xml
+          cp -r www/* myapp/www/
           [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
-
-          # 2. الدخول لمجلد المشروع لتنفيذ كافة العمليات بداخله
+          
+          # 4. الدخول للمجلد وتنفيذ البناء بداخله حصراً
           cd myapp
-
+          
           # قبول التراخيص
           yes | sdkmanager --licenses || true
-
+          
           # إضافة المنصة والإضافات
           cordova platform add android@13.0.0
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
-          cordova plugin add cordova-plugin-android-permissions
-
-          # 3. إنشاء مفتاح التوقيع داخل المجلد
-          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyJapan" -deststoretype pkcs12
-
-          # 4. إنشاء ملف build.json في المكان الصحيح
+          
+          # 5. إنشاء مفتاح التوقيع داخل مجلد myapp
+          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
+          
+          # 6. إنشاء ملف build.json داخل مجلد myapp
           echo '{"android": {"release": {"keystore": "release.jks", "storePassword": "123456", "alias": "safety_key", "password": "123456"}}}' > build.json
 
-          # 5. البناء النهائي
+          # 7. البناء باستخدام الملف المحلي
           cordova build android --release --buildConfig=build.json -- --packageType=apk
-
-          # نقل الملف النهائي للخارج للتحميل
-          cp platforms/android/app/build/outputs/apk/release/*.apk ../SafetyCall_Final.apk
+          
+          # 8. استخراج النتيجة
+          mkdir -p ../output
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/SafetyCall.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Japan-APK
-          path: SafetyCall_Final.apk
+          name: Safety-Call-Japan-Package
+          path: output/
