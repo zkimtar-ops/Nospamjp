@@ -1,4 +1,4 @@
-name: SOS_Japan_Final_Build_Working
+name: Safety_Japan_Ultimate_Build
 
 on:
   push:
@@ -21,45 +21,45 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Create and Build App
+      - name: Full Build Process
         run: |
-          # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء المجلد الأساسي للتطبيق
+          # إنشاء المشروع
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 3. نسخ ملفاتك البرمجية داخل مجلد التطبيق
+          # نسخ ملفاتك
           cp config.xml myapp/config.xml
           cp -r www/* myapp/www/
           [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
           
-          # 4. الدخول للمجلد وتنفيذ البناء بداخله حصراً
           cd myapp
           
           # قبول التراخيص
           yes | sdkmanager --licenses || true
           
-          # إضافة المنصة والإضافات
+          # إضافة المنصة
           cordova platform add android@13.0.0
+          
+          # إضافة الإضافات (بما في ذلك إضافة الصلاحيات للمطالبة بها داخل التطبيق)
           cordova plugin add cordova-plugin-firebasex@16.1.0
+          cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-androidx-adapter
           
-          # 5. إنشاء مفتاح التوقيع داخل مجلد myapp
+          # إنشاء مفتاح التوقيع
           keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
           
-          # 6. إنشاء ملف build.json داخل مجلد myapp
+          # إعداد ملف البناء
           echo '{"android": {"release": {"keystore": "release.jks", "storePassword": "123456", "alias": "safety_key", "password": "123456"}}}' > build.json
 
-          # 7. البناء باستخدام الملف المحلي
+          # بناء التطبيق APK
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
-          # 8. استخراج النتيجة
           mkdir -p ../output
-          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/SafetyCall.apk
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/SafetyCall_Pro.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Japan-Package
+          name: Safety-Call-Japan-Pro
           path: output/
