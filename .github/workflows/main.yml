@@ -26,10 +26,10 @@ jobs:
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء المجلد (إذا كان موجوداً سنكمل بداخله)
+          # 2. إنشاء المجلد (أو استخدامه إذا كان موجوداً)
           cordova create build_dir com.nospam.japan "Safety Call Japan" || true
           
-          # 3. نقل الملفات
+          # 3. نقل الملفات الأساسية
           [ -f "config.xml" ] && cp config.xml build_dir/config.xml
           mkdir -p build_dir/www
           if [ -f "index.html" ]; then
@@ -50,7 +50,7 @@ jobs:
           cordova plugin add cordova-plugin-androidx-adapter || true
           cordova plugin add cordova-plugin-android-permissions || true
 
-          # 6. التوقيع
+          # 6. التوقيع الرقمي
           keytool -genkey -v -keystore $(pwd)/release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12 || true
 
           # 7. ملف build.json
@@ -65,13 +65,14 @@ jobs:
             }
           }" > build.json
 
-          # 8. البناء
+          # 8. البناء الفعلي
           cordova build android --release --buildConfig=$(pwd)/build.json -- --packageType=apk
 
-          # 9. استخراج الملف (تعديل البحث لضمان النجاح)
+          # 9. استخراج الملف (تعديل البحث للبحث في كامل مساحة العمل)
           mkdir -p ../output
-          # سنبحث عن أي ملف apk في مجلد المنصات وننقله
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/Safety_Call_Japan.apk \;
+          echo "جاري البحث عن ملف الـ APK واستخراجه..."
+          # البحث من المجلد الرئيسي للمستودع لضمان إيجاد الملف أينما كان
+          find $GITHUB_WORKSPACE -name "*release.apk" -exec cp {} ../output/Safety_Call_Japan.apk \;
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
