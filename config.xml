@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Safety Call Japan</name>
-    <description>تطبيق حماية المكالمات المتقدم مع كامل الصلاحيات</description>
+    <description>تطبيق حماية المكالمات المتقدم</description>
     <author email="dev@nospam.jp">Zakaria</author>
     
     <content src="index.html" />
@@ -12,7 +12,6 @@
     <platform name="android">
         <resource-file src="google-services.json" target="app/google-services.json" />
         
-        <!-- إضافة الصلاحيات الحساسة لحظر المكالمات -->
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
             <uses-permission android:name="android.permission.READ_CALL_LOG" />
