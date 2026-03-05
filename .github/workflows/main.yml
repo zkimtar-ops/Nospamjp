@@ -1,87 +1,24 @@
-name: Safety_Japan_Call_Ultimate_V7
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Safety Call Japan</name>
+    <description>Advanced Call Shield for Japan</description>
+    <author email="dev@nospam.jp">Zakaria</author>
+    
+    <content src="index.html" />
+    
+    <preference name="Fullscreen" value="true" />
+    <preference name="StatusBarOverlaysWebview" value="true" />
+    <preference name="BackgroundColor" value="0xffffffff" />
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+    <platform name="android">
+        <resource-file src="google-services.json" target="app/google-services.json" />
+        <preference name="AndroidXEnabled" value="true" />
+        <preference name="KeepRunning" value="true" />
+    </platform>
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Build and Sign Everything
-        run: |
-          # 1. تثبيت كوردوفا
-          npm install -g cordova
-          
-          # 2. إنشاء مشروع مؤقت لضمان هيكلية سليمة
-          cordova create myapp com.nospam.japan "Safety Call Japan"
-          
-          # 3. نسخ ملفاتك أنت إلى المشروع
-          rm -rf myapp/www/*
-          cp -r www/* myapp/www/
-          cp config.xml myapp/config.xml
-          
-          # 4. نسخ ملف الفيرباس
-          if [ -f "google-services.json" ]; then
-            cp google-services.json myapp/google-services.json
-          fi
-
-          cd myapp
-
-          # 5. قبول تراخيص الأندرويد
-          yes | sdkmanager --licenses || true
-
-          # 6. إضافة المنصة (الإصدار المستقر 13)
-          cordova platform add android@13.0.0
-          
-          # 7. إضافة الإضافات بإصدارات متوافقة مع أندرويد 13
-          # استخدمنا إصدار 16.1.0 لـ firebasex لأنه الأكثر استقراراً مع أندرويد 13
-          cordova plugin add cordova-plugin-firebasex@16.1.0
-          cordova plugin add cordova-plugin-androidx-adapter
-          cordova plugin add cordova-plugin-android-permissions
-          
-          # 8. إنشاء مفتاح التوقيع
-          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyJapan" -deststoretype pkcs12
-
-          # 9. ملف إعدادات البناء
-          cat <<EOF > build.json
-          {
-              "android": {
-                  "release": {
-                      "keystore": "release.jks",
-                      "storePassword": "123456",
-                      "alias": "safety_key",
-                      "password": "123456"
-                  }
-              }
-          }
-          EOF
-
-          # 10. بناء APK و AAB
-          cordova build android --release --buildConfig=build.json -- --packageType=apk
-          cordova build android --release --buildConfig=build.json -- --packageType=bundle
-
-          # 11. تنظيم المخرجات للتحميل
-          mkdir -p ../output
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/Safety_Japan_Final.apk \;
-          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ../output/Safety_Japan_Final.aab \;
-          cp release.jks ../output/safety_release.jks
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Full-Production-Package
-          path: output/
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+</widget>
