@@ -1,40 +1,78 @@
-name: Safety_Call_Build
+name: Build Anshin Guard APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-      - name: Build APK
-        run: |
-          npm install -g cordova
-          cordova create build_dir com.nospam.japan "Safety Call"
-          cp config.xml build_dir/config.xml
-          mkdir -p build_dir/www
-          cp -r www/* build_dir/www/
-          [ -f "google-services.json" ] && cp google-services.json build_dir/google-services.json
-          
-          cd build_dir
-          cordova platform add android@13.0.0
-          
-          # إضافات مهمة: الفيرباس والأذونات
-          cordova plugin add cordova-plugin-firebasex@16.1.0
-          cordova plugin add cordova-plugin-android-permissions
-          
-          cordova build android --release -- --packageType=apk
-          mkdir -p ../output
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/SafetyCall.apk \;
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: APK-File
-          path: output/SafetyCall.apk
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Build APK with Cordova
+      run: |
+        # 1. تثبيت كوردوفا
+        npm install -g cordova
+        
+        # 2. إنشاء مشروع كوردوفا مؤقت لنقل الهيكل (أو تحديث الحالي)
+        cordova create build_dir com.nospam.japan "Safety Call Japan"
+        cp config.xml build_dir/config.xml
+        cp -r www/* build_dir/www/
+        [ -f "google-services.json" ] && cp google-services.json build_dir/google-services.json
+        
+        cd build_dir
+        
+        # 3. قبول التراخيص وإضافة المنصة
+        yes | sdkmanager --licenses || true
+        cordova platform add android@13.0.0
+        
+        # 4. إضافة الإضافات (التي طلبتها للصلاحيات والفيرباس)
+        cordova plugin add cordova-plugin-firebasex@16.1.0
+        cordova plugin add cordova-plugin-android-permissions
+        cordova plugin add cordova-plugin-androidx-adapter
+        
+        # 5. إنشاء ملف التوقيع (release.jks) في المجلد الحالي
+        # هذا الأمر يحل مشكلة Keystore file does not exist
+        keytool -genkey -v \
+          -keystore release.jks \
+          -alias safety_key \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -storepass 123456 \
+          -keypass 123456 \
+          -dname "CN=Zakaria, O=NoSpam Japan, C=JP" -deststoretype pkcs12
+
+        # 6. إنشاء ملف build.json لربط المفتاح بالبناء
+        echo '{
+          "android": {
+            "release": {
+              "keystore": "release.jks",
+              "storePassword": "123456",
+              "alias": "safety_key",
+              "password": "123456"
+            }
+          }
+        }' > build.json
+
+        # 7. تشغيل البناء النهائي
+        cordova build android --release --buildConfig=build.json -- --packageType=apk
+
+        # 8. استخراج الملف للرفع
+        mkdir -p ../output
+        find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/Safety_Call_Japan.apk \;
+
+    - name: Upload Final APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: AnshinGuard-Production-APK
+        path: output/Safety_Call_Japan.apk
