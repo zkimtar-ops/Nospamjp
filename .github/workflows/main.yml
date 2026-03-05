@@ -1,4 +1,4 @@
-name: Safety_Japan_Manual_Final_Build
+name: Safety_Japan_Fixed_Final
 
 on:
   push:
@@ -18,35 +18,50 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build Process
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build App
         run: |
           npm install -g cordova
           
           # 1. إنشاء المشروع
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 2. نسخ ملفاتك اليدوية (config, build, www) داخل المجلد
+          # 2. نسخ ملفاتك اليدوية لمجلد المشروع
           cp config.xml myapp/config.xml
-          cp build.json myapp/build.json
           [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
           
           # مسح المجلد الافتراضي ونسخ واجهتك
           rm -rf myapp/www/*
-          cp -r www/* myapp/www/
+          if [ -d "www" ]; then cp -r www/* myapp/www/; else cp index.html myapp/www/index.html; fi
 
           cd myapp
 
-          # 3. إعداد المنصة والإضافات
+          # 3. توليد مفتاح التوقيع داخل مجلد المشروع
+          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
+
+          # 4. إنشاء ملف build.json مع استخدام المسار المطلق للمفتاح
+          # هذا السطر يحل مشكلة Keystore file does not exist نهائياً
+          echo "{
+            \"android\": {
+              \"release\": {
+                \"keystore\": \"$(pwd)/release.jks\",
+                \"storePassword\": \"123456\",
+                \"alias\": \"safety_key\",
+                \"password\": \"123456\"
+              }
+            }
+          }" > build.json
+
+          # 5. إضافة المنصة والإضافات
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-androidx-adapter
 
-          # 4. توليد المفتاح (يجب أن يطابق بيانات build.json اليدوية)
-          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
-
-          # 5. البناء باستخدام ملف build.json اليدوي الذي نسخناه
+          # 6. البناء النهائي
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
           mkdir -p ../output
@@ -55,5 +70,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Final-APK-Package
+          name: Final-Production-APK
           path: output/
