@@ -1,0 +1,61 @@
+name: Safety_Call_Japan_Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Build App with Cordova
+        run: |
+          npm install -g cordova
+          
+          # إنشاء مشروع كوردوفا مؤقت
+          cordova create myapp com.zakaria.sosjapan "Safety Call Japan"
+          
+          # نقل ملفاتك إلى المشروع
+          rm -rf myapp/www/*
+          cp -r www/* myapp/www/
+          cp config.xml myapp/config.xml
+          
+          # نقل ملف Firebase (يجب أن ترفعه أنت في المجلد الرئيسي أولاً)
+          if [ -f "google-services.json" ]; then
+            cp google-services.json myapp/google-services.json
+          else
+            echo "تحذير: ملف google-services.json غير موجود، سيتم البناء بدونه."
+          fi
+          
+          cd myapp
+          cordova platform add android@13.0.0
+          
+          # إضافة الإضافات الضرورية
+          cordova plugin add cordova-plugin-firebasex
+          cordova plugin add cordova-plugin-statusbar
+          
+          # إنشاء مفتاح توقيع جديد
+          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
+          
+          # البدء في بناء الـ APK
+          cordova build android --release --device -- --keystore=release.jks --storePassword=123456 --alias=safety_key --password=123456 --packageType=apk
+
+          # تجهيز الملف للتحميل
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../Safety_Call_Final.apk
+
+      - name: Upload Final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Safety-Call-Japan-APK
+          path: Safety_Call_Final.apk
