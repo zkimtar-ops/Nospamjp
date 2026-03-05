@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>Safety Call Japan</name>
-    <description>تطبيق حماية المكالمات المتقدم</description>
-    <author email="dev@nospam.jp">Zakaria</author>
+    <description>نظام حماية المكالمات المتقدم لليابان</description>
+    <author email="dev@safetycall.jp">Zakaria</author>
     
     <content src="index.html" />
     
@@ -10,16 +10,17 @@
     <preference name="StatusBarOverlaysWebview" value="true" />
 
     <platform name="android">
+        <!-- ربط ملف فيرباس إذا كان موجوداً -->
         <resource-file src="google-services.json" target="app/google-services.json" />
         
+        <!-- حقن الصلاحيات المطلوبة للحظر مباشرة في الأندرويد -->
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
             <uses-permission android:name="android.permission.READ_CALL_LOG" />
             <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
             <uses-permission android:name="android.permission.BIND_SCREENING_SERVICE" />
-            <uses-permission android:name="android.permission.INTERNET" />
         </config-file>
-
+        
         <preference name="AndroidXEnabled" value="true" />
     </platform>
 
