@@ -26,16 +26,28 @@ jobs:
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. تهيئة المجلد الرئيسي كمشروع كوردوفا (استخدام --force للسماح بالبناء في المجلد الحالي)
-          # سنستخدم اسم البكج والاسم الذي تريده
-          cordova create . com.nospam.japan "Safety Call Japan" --force
+          # 2. إنشاء المشروع في مجلد منفصل لتجنب خطأ "Path already exists"
+          cordova create build_dir com.nospam.japan "Safety Call Japan"
           
-          # 3. التأكد من وجود المجلدات والملفات في مكانها الصحيح
-          mkdir -p www
-          # إذا كان index.html في الخارج، انقله للداخل لكي تراه كوردوفا
-          [ -f "index.html" ] && mv index.html www/index.html
+          # 3. نقل ملفاتك إلى مجلد البناء
+          # نقل config.xml الخاص بك
+          [ -f "config.xml" ] && cp config.xml build_dir/config.xml
           
-          # 4. قبول التراخيص وإضافة المنصة
+          # نقل index.html إلى مجلد www داخل مجلد البناء
+          mkdir -p build_dir/www
+          if [ -f "index.html" ]; then
+            cp index.html build_dir/www/index.html
+          elif [ -d "www" ]; then
+            cp -r www/* build_dir/www/
+          fi
+          
+          # نقل ملف الفيرباس
+          [ -f "google-services.json" ] && cp google-services.json build_dir/google-services.json
+          
+          # 4. الدخول لمجلد البناء لتنفيذ العمليات
+          cd build_dir
+          
+          # قبول التراخيص وإضافة المنصة
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
@@ -44,8 +56,7 @@ jobs:
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add cordova-plugin-android-permissions
 
-          # 6. إنشاء مفتاح التوقيع في المجلد الرئيسي (Workspace Root)
-          # استخدام $(pwd) يضمن أن المسار سيكون /home/runner/work/Nospamjp/Nospamjp/release.jks
+          # 6. إنشاء مفتاح التوقيع داخل المجلد الحالي (المسار المطلق)
           keytool -genkey -v -keystore $(pwd)/release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
 
           # 7. إنشاء ملف build.json يشير للمسار المطلق للمفتاح
@@ -60,12 +71,12 @@ jobs:
             }
           }" > build.json
 
-          # 8. البناء النهائي - كوردوفا ستبحث عن build.json في المجلد الحالي
+          # 8. البناء النهائي
           cordova build android --release --buildConfig=$(pwd)/build.json -- --packageType=apk
 
-          # 9. استخراج الملف النهائي
-          mkdir -p output
-          cp platforms/android/app/build/outputs/apk/release/*.apk output/Safety_Call_Japan.apk
+          # 9. استخراج الملف النهائي إلى الخارج
+          mkdir -p ../output
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/Safety_Call_Japan.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
