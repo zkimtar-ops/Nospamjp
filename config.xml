@@ -1,24 +1,31 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Safety Call Japan</name>
-    <description>Advanced Call Shield for Japan</description>
+    <description>تطبيق حماية المكالمات المتقدم مع كامل الصلاحيات</description>
     <author email="dev@nospam.jp">Zakaria</author>
     
     <content src="index.html" />
     
     <preference name="Fullscreen" value="true" />
     <preference name="StatusBarOverlaysWebview" value="true" />
-    <preference name="BackgroundColor" value="0xffffffff" />
 
     <platform name="android">
         <resource-file src="google-services.json" target="app/google-services.json" />
+        
+        <!-- إضافة الصلاحيات الحساسة لحظر المكالمات -->
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+            <uses-permission android:name="android.permission.READ_CALL_LOG" />
+            <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+            <uses-permission android:name="android.permission.BIND_SCREENING_SERVICE" />
+            <uses-permission android:name="android.permission.INTERNET" />
+        </config-file>
+
         <preference name="AndroidXEnabled" value="true" />
-        <preference name="KeepRunning" value="true" />
     </platform>
 
     <access origin="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
     <allow-intent href="tel:*" />
-    <allow-intent href="sms:*" />
 </widget>
