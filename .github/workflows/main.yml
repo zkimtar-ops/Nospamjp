@@ -26,10 +26,17 @@ jobs:
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء المشروع
+          # 2. إنشاء مفتاح التوقيع في المجلد الرئيسي للمستودع (Workspace Root)
+          # هذا السطر يضمن وجود الملف في المسار الذي يطلبه الأندرويد بالضبط
+          keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.jks \
+            -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass 123456 -keypass 123456 \
+            -dname "CN=Zakaria" -deststoretype pkcs12
+
+          # 3. إنشاء المشروع
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 3. نقل الملفات (config.xml, www, google-services.json)
+          # 4. نقل ملفاتك (config.xml, www, google-services.json)
           [ -f "config.xml" ] && cp config.xml myapp/config.xml
           mkdir -p myapp/www
           if [ -d "www" ]; then cp -r www/* myapp/www/; else cp index.html myapp/www/index.html; fi
@@ -37,21 +44,27 @@ jobs:
           
           cd myapp
           
-          # 4. قبول التراخيص وإضافة المنصة
+          # 5. قبول التراخيص وإضافة المنصة
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
-          # 5. إضافة الإضافات (الأذونات والفيرباس)
+          # 6. إضافة الإضافات (الأذونات والفيرباس - لن يتم حذفها)
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
           
-          # 6. إنشاء مفتاح التوقيع (JKS)
-          # سنقوم بنسخه لاحقاً ليكون متاحاً للتحميل
-          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
-          
-          # 7. إعداد ملف build.json
-          echo "{\"android\": {\"release\": {\"keystore\": \"release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
+          # 7. إعداد ملف build.json باستخدام المسار المطلق للمفتاح
+          # هنا يكمن الحل: ربط الملف بالمسار الكامل
+          echo "{
+            \"android\": {
+              \"release\": {
+                \"keystore\": \"$GITHUB_WORKSPACE/release.jks\",
+                \"storePassword\": \"123456\",
+                \"alias\": \"safety_key\",
+                \"password\": \"123456\"
+              }
+            }
+          }" > build.json
 
           # 8. بناء الـ APK
           cordova build android --release --buildConfig=build.json -- --packageType=apk
@@ -61,15 +74,9 @@ jobs:
 
           # 10. تجميع كافة الملفات في مجلد واحد خارجي (Artifacts)
           mkdir -p ../dist
-          
-          # نسخ الـ APK
           find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../dist/SafetyCall_Final.apk \;
-          
-          # نسخ الـ AAB
           find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ../dist/SafetyCall_Final.aab \;
-          
-          # نسخ مفتاح الـ JKS (مهم جداً للاحتفاظ به)
-          cp release.jks ../dist/safety_call_key.jks
+          cp $GITHUB_WORKSPACE/release.jks ../dist/safety_call_key.jks
 
       - name: Upload Safety Call Package
         uses: actions/upload-artifact@v4
