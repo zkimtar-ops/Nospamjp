@@ -37,7 +37,7 @@ jobs:
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
-          # 4. إضافة الإضافات (مهم جداً للصلاحيات والفيرباس)
+          # 4. إضافة الإضافات (الأذونات والفيرباس)
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
@@ -51,9 +51,9 @@ jobs:
           # 7. البناء النهائي
           cordova build android --release --buildConfig=$(pwd)/build.json -- --packageType=apk
           
-          # 8. استخراج الملف
+          # 8. استخراج الملف (تعديل: البحث في كل مكان لتجنب خطأ No such file)
           mkdir -p ../output
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/SafetyCall_Final.apk \;
+          find . -name "*release.apk" -exec cp {} ../output/SafetyCall_Final.apk \;
 
       - name: Upload Final APK
         uses: actions/upload-artifact@v4
