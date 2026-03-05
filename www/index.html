@@ -2,27 +2,60 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>Safety Call Japan</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f4; }
-        .btn { background: #c0392b; color: white; border: none; padding: 15px 25px; border-radius: 5px; font-size: 18px; cursor: pointer; }
-        .status { margin: 20px; font-weight: bold; color: #27ae60; }
+        body { 
+            margin: 0; padding: 0; font-family: sans-serif; 
+            background: #f8f9fa; display: flex; align-items: center; 
+            justify-content: center; height: 100vh; text-align: center;
+        }
+        .container { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 85%; }
+        .icon { font-size: 60px; color: #c0392b; margin-bottom: 20px; }
+        h1 { font-size: 22px; color: #333; margin-bottom: 10px; }
+        .status-box { padding: 15px; border-radius: 10px; margin: 20px 0; font-weight: bold; }
+        .waiting { background: #fff3cd; color: #856404; }
+        .ready { background: #d4edda; color: #155724; }
+        .btn { 
+            background: #c0392b; color: white; border: none; padding: 15px; 
+            border-radius: 50px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <h1>🛡️ Safety Call Japan</h1>
-    <div class="status" id="status">جاري التحقق من الصلاحيات...</div>
-    <p>يجب منح التطبيق كافة الأذونات ليعمل حظر المكالمات من Firebase.</p>
-    <button class="btn" onclick="requestPermissions()">طلب الأذونات يدوياً</button>
+    <div class="container">
+        <div class="icon">🛡️</div>
+        <h1>Safety Call Japan</h1>
+        <div id="status" class="status-box waiting">بانتظار تفعيل الصلاحيات...</div>
+        <p style="color: #666; font-size: 14px;">يجب منح التطبيق صلاحية الوصول للمكالمات ليتمكن من حظر المزعجين عبر Firebase.</p>
+        <button class="btn" onclick="askPermissions()">تفعيل الحماية الآن</button>
+    </div>
 
     <script src="cordova.js"></script>
     <script>
         document.addEventListener('deviceready', function() {
-            requestPermissions();
+            console.log("التطبيق جاهز للعمل");
+            checkCurrentPermissions();
         }, false);
 
-        function requestPermissions() {
+        function checkCurrentPermissions() {
+            var permissions = cordova.plugins.permissions;
+            permissions.hasPermission(permissions.READ_PHONE_STATE, function(status) {
+                if (status.hasPermission) {
+                    updateUIStatus(true);
+                }
+            });
+        }
+
+        function updateUIStatus(isActive) {
+            var st = document.getElementById('status');
+            if (isActive) {
+                st.innerText = "النظام يعمل بنجاح ✅";
+                st.className = "status-box ready";
+            }
+        }
+
+        function askPermissions() {
             var permissions = cordova.plugins.permissions;
             var list = [
                 permissions.READ_PHONE_STATE,
@@ -31,13 +64,14 @@
             ];
 
             permissions.requestPermissions(list, function(status) {
-                if(status.hasPermission) {
-                    document.getElementById('status').innerText = "الحماية مفعلة ✅";
+                if (status.hasPermission) {
+                    updateUIStatus(true);
+                    alert("تم تفعيل الصلاحيات! تأكد من تعيين التطبيق كافتراضي في إعدادات الهاتف.");
                 } else {
-                    document.getElementById('status').innerText = "الصلاحيات مرفوضة ❌";
+                    alert("تم رفض الصلاحيات. التطبيق لن يتمكن من حظر المكالمات.");
                 }
             }, function() {
-                document.getElementById('status').innerText = "حدث خطأ في طلب الأذونات";
+                alert("حدث خطأ تقني أثناء طلب الصلاحيات.");
             });
         }
     </script>
