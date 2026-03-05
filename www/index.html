@@ -1,49 +1,66 @@
-<!DOCTYPE html>
-​<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Safety Call Japan</title>
-<link href="https://www.google.com/search?q=https://fonts.googleapis.com/css2%3Ffamily%3DCairo:wght%40400%3B700%26display%3Dswap" rel="stylesheet">
-<link rel="stylesheet" href="https://www.google.com/search?q=https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<style>
-:root { --primary: #c0392b; --bg: #f8f9fa; }
-body {
-margin: 0; padding: 0; font-family: 'Cairo', sans-serif;
-background: var(--bg); height: 100vh; overflow: hidden;
-display: flex; flex-direction: column; align-items: center; justify-content: center;
-}
-.container {
-width: 85%; text-align: center; background: white;
-padding: 40px 20px; border-radius: 30px;
-box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-}
-.shield-icon {
-font-size: 80px; color: var(--primary); margin-bottom: 20px;
-}
-h1 { font-size: 22px; color: #333; }
-.status { color: #27ae60; font-weight: bold; margin: 10px 0; }
-.btn {
-background: var(--primary); color: white; border: none;
-padding: 16px 0; width: 100%; border-radius: 50px;
-font-size: 18px; font-weight: bold; cursor: pointer;
-box-shadow: 0 8px 20px rgba(192, 57, 43, 0.3);
-}
-</style>
-</head>
-<body>
-<div class="container">
-<div class="shield-icon"><i class="fas fa-shield-halved"></i></div>
-<h1>Safety Call Japan</h1>
-<p class="status" id="st">جاري الفحص...</p>
-<p>نظام الحماية الذكي مفعل الآن لحظر المزعجين.</p>
-<button class="btn" onclick="alert('النظام يعمل بنجاح ✅')">تحديث الحالة</button>
-</div>
-<script src="cordova.js"></script>
-<script>
-document.addEventListener('deviceready', function() {
-document.getElementById('st').innerText = "الحماية مفعلة ✅";
-}, false);
-</script>
-</body>
-</html>
+name: Safety_Japan_Build_Final_v8
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build App
+        run: |
+          npm install -g cordova
+          
+          # إنشاء المشروع
+          cordova create myapp com.nospam.japan "Safety Call Japan"
+          
+          # نقل ملفاتك
+          rm -rf myapp/www/*
+          cp -r www/* myapp/www/
+          cp config.xml myapp/config.xml
+          
+          # نسخ ملف الفيرباس إذا وجد
+          [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
+
+          cd myapp
+
+          # قبول التراخيص
+          yes | sdkmanager --licenses || true
+
+          # إضافة المنصة والإضافات
+          cordova platform add android@13.0.0
+          cordova plugin add cordova-plugin-firebasex@16.1.0
+          cordova plugin add cordova-plugin-androidx-adapter
+          cordova plugin add cordova-plugin-android-permissions
+
+          # إنشاء المفتاح
+          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyJapan" -deststoretype pkcs12
+
+          # إنشاء ملف البناء بطريقة الـ echo لتجنب خطأ الملف المفقود
+          echo '{ "android": { "release": { "keystore": "release.jks", "storePassword": "123456", "alias": "safety_key", "password": "123456" } } }' > build.json
+
+          # بناء ملف APK
+          cordova build android --release --buildConfig=build.json -- --packageType=apk
+
+          # نقل الملف للتحميل
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../SafetyCall.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Safety-Call-Japan-APK
+          path: SafetyCall.apk
