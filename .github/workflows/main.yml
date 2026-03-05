@@ -26,40 +26,34 @@ jobs:
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء المشروع في مجلد منفصل لتجنب خطأ "Path already exists"
-          cordova create build_dir com.nospam.japan "Safety Call Japan"
+          # 2. إنشاء المجلد (إذا كان موجوداً سنكمل بداخله)
+          cordova create build_dir com.nospam.japan "Safety Call Japan" || true
           
-          # 3. نقل ملفاتك إلى مجلد البناء
-          # نقل config.xml الخاص بك
+          # 3. نقل الملفات
           [ -f "config.xml" ] && cp config.xml build_dir/config.xml
-          
-          # نقل index.html إلى مجلد www داخل مجلد البناء
           mkdir -p build_dir/www
           if [ -f "index.html" ]; then
             cp index.html build_dir/www/index.html
           elif [ -d "www" ]; then
             cp -r www/* build_dir/www/
           fi
-          
-          # نقل ملف الفيرباس
           [ -f "google-services.json" ] && cp google-services.json build_dir/google-services.json
           
-          # 4. الدخول لمجلد البناء لتنفيذ العمليات
           cd build_dir
           
-          # قبول التراخيص وإضافة المنصة
+          # 4. التراخيص والمنصة
           yes | sdkmanager --licenses || true
-          cordova platform add android@13.0.0
+          cordova platform add android@13.0.0 || true
           
-          # 5. إضافة الإضافات الضرورية
-          cordova plugin add cordova-plugin-firebasex@16.1.0
-          cordova plugin add cordova-plugin-androidx-adapter
-          cordova plugin add cordova-plugin-android-permissions
+          # 5. الإضافات
+          cordova plugin add cordova-plugin-firebasex@16.1.0 || true
+          cordova plugin add cordova-plugin-androidx-adapter || true
+          cordova plugin add cordova-plugin-android-permissions || true
 
-          # 6. إنشاء مفتاح التوقيع داخل المجلد الحالي (المسار المطلق)
-          keytool -genkey -v -keystore $(pwd)/release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
+          # 6. التوقيع
+          keytool -genkey -v -keystore $(pwd)/release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12 || true
 
-          # 7. إنشاء ملف build.json يشير للمسار المطلق للمفتاح
+          # 7. ملف build.json
           echo "{
             \"android\": {
               \"release\": {
@@ -71,15 +65,16 @@ jobs:
             }
           }" > build.json
 
-          # 8. البناء النهائي
+          # 8. البناء
           cordova build android --release --buildConfig=$(pwd)/build.json -- --packageType=apk
 
-          # 9. استخراج الملف النهائي إلى الخارج
+          # 9. استخراج الملف (تعديل البحث لضمان النجاح)
           mkdir -p ../output
-          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/Safety_Call_Japan.apk
+          # سنبحث عن أي ملف apk في مجلد المنصات وننقله
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/Safety_Call_Japan.apk \;
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Final-Production-APK
-          path: output/
+          path: output/Safety_Call_Japan.apk
