@@ -2,49 +2,33 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NoSpam Japan - Anshin Guard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Safety Call Japan</title>
     <style>
-        :root { --primary: #c0392b; --success: #27ae60; --bg: #ffffff; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; font-family: 'Cairo', sans-serif; background-color: var(--bg); text-align: center; }
-        .screen { display: flex; height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
-        .icon-hero { font-size: 80px; color: var(--primary); margin-bottom: 20px; }
-        h1 { font-size: 26px; margin: 10px 0; }
-        p { color: #666; line-height: 1.6; margin-bottom: 30px; }
-        .btn { 
-            border: none; padding: 16px 30px; border-radius: 12px; 
-            font-size: 18px; font-weight: 700; cursor: pointer; 
-            width: 100%; max-width: 300px; background: var(--primary); color: white;
-        }
-        #status-msg { margin-top: 20px; font-weight: bold; color: var(--success); display: none; }
+        body { margin: 0; font-family: sans-serif; background: #fdfdfd; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; }
+        .box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 85%; border: 2px solid #c0392b; }
+        h1 { color: #c0392b; font-size: 22px; }
+        .btn { background: #c0392b; color: white; border: none; padding: 15px; border-radius: 50px; width: 100%; font-size: 18px; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        #status { margin-top: 20px; font-weight: bold; color: #27ae60; }
     </style>
 </head>
 <body>
-
-    <div class="screen">
-        <div class="icon-hero"><i class="fa-solid fa-shield-halved"></i></div>
-        <h1>تفعيل الحماية</h1>
-        <p>يجب منح التطبيق الأذونات اللازمة وتعيينه كتطبيق افتراضي لكي يتمكن من حظر الأرقام المزعجة تلقائياً.</p>
-        
-        <button class="btn" onclick="requestAllPermissions()">تفعيل الأذونات الآن</button>
-        <div id="status-msg">الحماية تعمل الآن ✅</div>
+    <div class="box">
+        <h1>🛡️ حماية المكالمات</h1>
+        <p>يجب الضغط على الزر أدناه ومنح كافة الصلاحيات لكي يعمل نظام الحظر من Firebase.</p>
+        <button class="btn" onclick="activatePermissions()">تفعيل الحماية الآن</button>
+        <div id="status"></div>
     </div>
 
     <script src="cordova.js"></script>
     <script>
         document.addEventListener('deviceready', function() {
-            console.log("Cordova is ready");
-            // محاولة طلب الأذونات تلقائياً عند الفتح
-            requestAllPermissions();
+            // طلب الأذونات تلقائياً عند فتح التطبيق
+            activatePermissions();
         }, false);
 
-        function requestAllPermissions() {
+        function activatePermissions() {
             if (typeof cordova === 'undefined') return;
-
             var permissions = cordova.plugins.permissions;
             var list = [
                 permissions.READ_PHONE_STATE,
@@ -52,21 +36,16 @@
                 permissions.READ_CALL_LOG
             ];
 
-            // 1. طلب أذونات الهاتف
             permissions.requestPermissions(list, function(status) {
                 if (status.hasPermission) {
+                    document.getElementById('status').innerText = "الحماية تعمل بنجاح ✅";
+                    // تنبيه المستخدم بضرورة الإعداد اليدوي
                     console.log("Permissions granted");
-                    document.getElementById('status-msg').style.display = 'block';
-                    
-                    // 2. طلب تعيين التطبيق كافتراضي (هذا يظهر نافذة النظام)
-                    if (window.AndroidInterface && window.AndroidInterface.requestDefaultCallerIdApp) {
-                        window.AndroidInterface.requestDefaultCallerIdApp();
-                    }
                 } else {
-                    alert("يجب قبول الأذونات لكي يعمل الحظر");
+                    document.getElementById('status').innerText = "يرجى الموافقة على الصلاحيات ❌";
                 }
             }, function() {
-                alert("حدث خطأ أثناء طلب الأذونات");
+                alert("خطأ في تفعيل الإضافات");
             });
         }
     </script>
