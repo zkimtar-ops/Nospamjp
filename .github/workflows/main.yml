@@ -32,7 +32,7 @@ jobs:
           npm install -g cordova --no-audit
           rm -rf node_modules package-lock.json platforms plugins
           
-          # 2. إنشاء مجلد المشروع ونقل الملفات (لضمان بقاء اسم التطبيق كما هو)
+          # 2. إنشاء مجلد المشروع والحفاظ على الاسم والهوية
           cordova create build_dir com.nospam.japan "Safety Call Japan"
           cp config.xml build_dir/config.xml
           mkdir -p build_dir/www
@@ -41,20 +41,19 @@ jobs:
           
           cd build_dir
 
-          # 3. إضافة المنصة والإضافات (بدون تغيير أي صلاحيات أو أدونات)
+          # 3. إضافة المنصة والإضافات الأصلية (التي طلبتها بدقة)
           cordova platform add android@13.0.0 --save
           cordova plugin add cordova-plugin-android-permissions --save
           cordova plugin add cordova-plugin-firebasex@16.1.0 --save
           cordova plugin add cordova-plugin-androidx-adapter --save
           cordova plugin add com-darryncampbell-cordova-plugin-intent --save
-          cordova plugin add cordova-plugin-device --save
           
           cordova prepare android
           
-          # 4. إنشاء مفتاح التوقيع الدائم (بنفس بياناتك الأصلية)
-          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyCallJapan" -deststoretype pkcs12
+          # 4. إنشاء مفتاح التوقيع الدائم (بنفس بيانات Zakaria)
+          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
 
-          # 5. إعداد ملف التوقيع
+          # 5. إعداد ملف التوقيع البرمجي
           cat <<EOF > build.json
           {
               "android": {
@@ -68,21 +67,19 @@ jobs:
           }
           EOF
 
-          # 6. بناء APK و AAB معاً باستخدام طريقة البناء المطلوبة
+          # 6. بناء التطبيق بصيغتي APK و AAB
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
           echo "Building AAB..."
           cordova build android --release --buildConfig=build.json -- --packageType=bundle
 
-          # 7. استخراج كافة الملفات إلى المجلد النهائي
+          # 7. استخراج الملفات للمجلد النهائي (خارج build_dir)
           mkdir -p ../output
-          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/SafetyCall_Install.apk
-          cp platforms/android/app/build/outputs/bundle/release/*.aab ../output/SafetyCall_PlayStore.aab
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/SafetyCall_Install.apk \;
+          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ../output/SafetyCall_PlayStore.aab \;
           cp release.jks ../output/safety_key.jks
 
       - name: Upload Full Package
         uses: actions/upload-artifact@v4
-        with:
-          name: SafeCall-Japan-Full-Package
-          path: output/
+  
