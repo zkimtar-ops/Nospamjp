@@ -26,7 +26,7 @@ jobs:
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء مجلد المخرجات في مكان مطلق
+          # 2. إنشاء مجلد المخرجات
           mkdir -p $GITHUB_WORKSPACE/FINAL_ARTIFACTS
           
           # 3. إنشاء المفتاح الرقمي (JKS)
@@ -35,18 +35,15 @@ jobs:
             -storepass 123456 -keypass 123456 \
             -dname "CN=Zakaria" -deststoretype pkcs12
           
-          # نسخ المفتاح للمجلد النهائي
           cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
 
           # 4. إنشاء المشروع
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 5. نقل ملفاتك (استخدام find لضمان النسخ)
+          # 5. نقل الملفات (استخدام find للبحث والنسخ)
           find . -maxdepth 2 -name "config.xml" -not -path "./myapp/*" -exec cp {} myapp/config.xml \;
           find . -maxdepth 2 -name "index.html" -not -path "./myapp/*" -exec cp {} myapp/www/index.html \;
           find . -maxdepth 2 -name "google-services.json" -not -path "./myapp/*" -exec cp {} myapp/google-services.json \;
-          
-          # نقل مجلد src الذي يحتوي على ملف الجافا الخاص بالحظر
           [ -d "src" ] && cp -r src myapp/
           
           cd myapp
@@ -58,21 +55,21 @@ jobs:
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 7. إعداد ملف build.json بالمسار المطلق
+          # 7. إعداد ملف build.json
           echo "{\"android\": {\"release\": {\"keystore\": \"$GITHUB_WORKSPACE/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
-          # 8. بناء APK
+          # 8. بناء APK ونقله فوراً (استخدام find داخل المجلد الأب لضمان الوصول)
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
-          # 9. استخراج الـ APK (البحث الشامل في كل مجلد myapp)
-          echo "Moving final files..."
-          # سنبحث عن أي ملف ينتهي بـ .apk داخل مجلد myapp بالكامل وننقله للمجلد النهائي
-          find $GITHUB_WORKSPACE/myapp/platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \; || \
-          find $GITHUB_WORKSPACE/myapp -name "*-release.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
+          # 9. سحب الملف بقوة من أي مكان (تجنب خطأ المسار السابق)
+          find /home/runner/work/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
+          
+          # تأكيد وجود الملفات
+          ls -R $GITHUB_WORKSPACE/FINAL_ARTIFACTS/
 
-      - name: Upload Safety Package
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Japan-Build
+          name: Safety-Call-Japan-Package
           path: ${{ github.workspace }}/FINAL_ARTIFACTS/
