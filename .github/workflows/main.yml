@@ -1,4 +1,4 @@
-name: Safety_Japan_Success_Build
+name: Safety_Japan_Final_Success_Package
 
 on:
   push:
@@ -21,28 +21,35 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build and Fix Paths
+      - name: Build and Force Extract
         run: |
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء مجلد المخرجات
+          # 2. إنشاء مجلد المخرجات في مكان ثابت ومطلق
           mkdir -p $GITHUB_WORKSPACE/FINAL_ARTIFACTS
           
-          # 3. إنشاء المفتاح الرقمي في مكان ثابت
+          # 3. إنشاء المفتاح الرقمي (JKS)
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.jks \
             -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass 123456 -keypass 123456 \
             -dname "CN=Zakaria" -deststoretype pkcs12
           
+          # نسخ المفتاح فوراً للمجلد النهائي للتحميل
+          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
+
           # 4. إنشاء المشروع
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 5. نقل ملفاتك (البحث الشامل لضمان النسخ)
+          # 5. نقل ملفاتك (استخدام find لضمان النسخ حتى لو تغير المسار)
           find . -maxdepth 2 -name "config.xml" -not -path "./myapp/*" -exec cp {} myapp/config.xml \;
           find . -maxdepth 2 -name "index.html" -not -path "./myapp/*" -exec cp {} myapp/www/index.html \;
           find . -maxdepth 2 -name "google-services.json" -not -path "./myapp/*" -exec cp {} myapp/google-services.json \;
-          [ -d "src" ] && cp -r src myapp/
+          
+          # نقل مجلد src الذي يحتوي على ملف الجافا الخاص بالحظر
+          if [ -d "src" ]; then
+            cp -r src myapp/
+          fi
           
           cd myapp
           
@@ -53,20 +60,18 @@ jobs:
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 7. إعداد ملف build.json (استخدام المسار المطلق للمفتاح)
-          # هنا حل المشكلة: أخبرنا نظام أندرويد بالبحث عن المفتاح في المسار الصحيح
+          # 7. إعداد ملف التوقيع بالمسار المطلق للمفتاح
           echo "{\"android\": {\"release\": {\"keystore\": \"$GITHUB_WORKSPACE/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
-                    # 8. بناء APK
+          # 8. بناء APK
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
-          # 9. استخراج النتائج (استخدام find في كل مجلد المشروع لضمان إيجاد الـ APK)
-          echo "Moving final files..."
-          find . -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
-          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
+          # 9. استخراج الـ APK (البحث في مجلد myapp بالكامل لضمان إيجاده)
+          echo "Moving final APK..."
+          find $GITHUB_WORKSPACE/myapp -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
 
-      - name: Upload Artifacts
+      - name: Upload Safety Package
         uses: actions/upload-artifact@v4
         with:
           name: Safety-Call-Japan-Build
