@@ -1,4 +1,4 @@
-name: Safety_Japan_Final_Success_Package
+name: Safety_Japan_Ultimate_Success_Final
 
 on:
   push:
@@ -21,45 +21,40 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build Everything
+      - name: Build and Extract
         run: |
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء مجلد لتجميع النتائج النهائية
-          mkdir -p $GITHUB_WORKSPACE/FINAL_ARTIFACTS
-          
-          # 3. إنشاء مفتاح التوقيع (JKS) في المجلد الرئيسي
+          # 2. إنشاء المفتاح الرقمي في المجلد الرئيسي للعمل
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.jks \
             -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass 123456 -keypass 123456 \
             -dname "CN=Zakaria" -deststoretype pkcs12
-          
-          # نسخ المفتاح فوراً للخزنة
-          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
 
-          # 4. إنشاء المشروع في مجلد منفصل
-          cordova create build_dir com.nospam.japan "Safety Call Japan"
+          # 3. إنشاء مشروع نظيف في مجلد "myapp"
+          cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 5. نقل ملفاتك (تأكد من وجودها في المستودع)
-          cp config.xml build_dir/config.xml
-          mkdir -p build_dir/www
-          cp -r www/* build_dir/www/
-          [ -f "google-services.json" ] && cp google-services.json build_dir/google-services.json
+          # 4. نقل ملفاتك (تأكد من وجودها في المستودع)
+          cp config.xml myapp/config.xml
+          mkdir -p myapp/www
+          if [ -d "www" ]; then cp -r www/* myapp/www/; else cp index.html myapp/www/index.html; fi
+          [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
           
-          cd build_dir
+          # 5. إنشاء مجلد نهائي للمخرجات في المسار الرئيسي
+          mkdir -p $GITHUB_WORKSPACE/OUTPUT_FILES
           
-          # 6. التراخيص والمنصة
+          cd myapp
+          
+          # 6. التراخيص والمنصة والإضافات
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
-          
-          # 7. إضافة الإضافات (مهم جداً للصلاحيات والحظر)
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 8. إعداد ملف التوقيع
+          # 7. إعداد ملف التوقيع بمسار مطلق
           echo "{
             \"android\": {
               \"release\": {
@@ -71,18 +66,23 @@ jobs:
             }
           }" > build.json
 
-          # 9. بناء الـ APK أولاً وحفظه
+          # 8. بناء APK واستخراجه فوراً بالبحث في كل المجلدات الفرعية
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
+          find . -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/OUTPUT_FILES/SafetyCall_Install.apk \;
 
-          # 10. بناء الـ AAB ثانياً وحفظه
+          # 9. بناء AAB واستخراجه بالبحث في كل المجلدات الفرعية
           echo "Building AAB..."
           cordova build android --release --buildConfig=build.json -- --packageType=bundle
-          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_PlayStore.aab \;
+          find . -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/OUTPUT_FILES/SafetyCall_PlayStore.aab \;
 
-      - name: Upload Final Package
+          # 10. نسخ المفتاح للمجلد النهائي
+          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/OUTPUT_FILES/safety_key.jks
+
+      - name: Upload Final Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Japan-Full-Package
-          path: FINAL_ARTIFACTS/
+          name: Safety-Call-Japan-Package
+          # هنا المسار المضمون الذي يحتوي على الملفات الثلاثة
+          path: OUTPUT_FILES/
+          if-no-files-found: error
