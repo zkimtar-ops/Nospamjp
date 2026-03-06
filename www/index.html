@@ -6,29 +6,26 @@
     <title>Safety Call Japan</title>
     <style>
         body { margin: 0; font-family: sans-serif; background: #fdfdfd; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; }
-        .box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 85%; border: 2px solid #c0392b; }
-        h1 { color: #c0392b; font-size: 22px; }
-        .btn { background: #c0392b; color: white; border: none; padding: 15px; border-radius: 50px; width: 100%; font-size: 18px; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        #status { margin-top: 20px; font-weight: bold; color: #27ae60; }
+        .box { background: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 85%; }
+        .icon { font-size: 80px; color: #c0392b; margin-bottom: 20px; }
+        h1 { font-size: 22px; color: #333; margin-bottom: 10px; }
+        p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 30px; }
+        .btn { background: #c0392b; color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; }
+        #status { margin-top: 20px; font-size: 12px; color: #999; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h1>🛡️ حماية المكالمات</h1>
-        <p>يجب الضغط على الزر أدناه ومنح كافة الصلاحيات لكي يعمل نظام الحظر من Firebase.</p>
-        <button class="btn" onclick="activatePermissions()">تفعيل الحماية الآن</button>
-        <div id="status"></div>
+        <div class="icon">🛡️</div>
+        <h1>تفعيل الحماية الذكية</h1>
+        <p>لحظر المكالمات المزعجة، يجب منح الصلاحيات وتعيين التطبيق كحامي افتراضي للهاتف.</p>
+        <button class="btn" onclick="startActivation()">تفعيل الحماية الآن</button>
+        <div id="status">جاهز للتفعيل</div>
     </div>
 
     <script src="cordova.js"></script>
     <script>
-        document.addEventListener('deviceready', function() {
-            // طلب الأذونات تلقائياً عند فتح التطبيق
-            activatePermissions();
-        }, false);
-
-        function activatePermissions() {
-            if (typeof cordova === 'undefined') return;
+        function startActivation() {
             var permissions = cordova.plugins.permissions;
             var list = [
                 permissions.READ_PHONE_STATE,
@@ -36,17 +33,35 @@
                 permissions.READ_CALL_LOG
             ];
 
+            updateStatus("جاري طلب الصلاحيات...");
             permissions.requestPermissions(list, function(status) {
                 if (status.hasPermission) {
-                    document.getElementById('status').innerText = "الحماية تعمل بنجاح ✅";
-                    // تنبيه المستخدم بضرورة الإعداد اليدوي
-                    console.log("Permissions granted");
+                    updateStatus("تم منح الصلاحيات. فتح نافذة النظام...");
+                    openRoleManager();
                 } else {
-                    document.getElementById('status').innerText = "يرجى الموافقة على الصلاحيات ❌";
+                    updateStatus("يجب قبول الصلاحيات ❌");
                 }
-            }, function() {
-                alert("خطأ في تفعيل الإضافات");
-            });
+            }, null);
+        }
+
+        function openRoleManager() {
+            // هذا الكود يفتح نافذة النظام فوراً للمستخدم لاختيار التطبيق كافتراضي
+            if (window.plugins && window.plugins.intentShim) {
+                window.plugins.intentShim.startActivityForResult(
+                    {
+                        action: "android.app.role.action.REQUEST_ROLE",
+                        extras: {
+                            "android.app.role.extra.ROLE_NAME": "android.app.role.CALL_SCREENING"
+                        }
+                    },
+                    function() { updateStatus("الحماية مفعلة بنجاح ✅"); },
+                    function() { updateStatus("يرجى اختيار التطبيق يدوياً ⚠️"); }
+                );
+            }
+        }
+
+        function updateStatus(msg) {
+            document.getElementById('status').innerText = msg;
         }
     </script>
 </body>
