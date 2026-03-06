@@ -12,7 +12,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Build and Extract
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build and Fix Paths
         run: |
           # 1. تثبيت كوردوفا
           npm install -g cordova
@@ -20,37 +29,44 @@ jobs:
           # 2. إنشاء مجلد المخرجات
           mkdir -p $GITHUB_WORKSPACE/FINAL_ARTIFACTS
           
-          # 3. إنشاء المشروع
+          # 3. إنشاء المفتاح الرقمي في مكان ثابت
+          keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.jks \
+            -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass 123456 -keypass 123456 \
+            -dname "CN=Zakaria" -deststoretype pkcs12
+          
+          # 4. إنشاء المشروع
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 4. البحث عن الملفات ونقلها (حتى لو كانت داخل مجلدات فرعية)
-          # هذا الأمر سيبحث عن index.html في كل المستودع وينسخه للمكان الصحيح
-          find . -name "index.html" -not -path "./myapp/*" -exec cp {} myapp/www/index.html \;
-          find . -name "config.xml" -not -path "./myapp/*" -exec cp {} myapp/config.xml \;
-          find . -name "google-services.json" -not -path "./myapp/*" -exec cp {} myapp/google-services.json \;
+          # 5. نقل ملفاتك (البحث الشامل لضمان النسخ)
+          find . -maxdepth 2 -name "config.xml" -not -path "./myapp/*" -exec cp {} myapp/config.xml \;
+          find . -maxdepth 2 -name "index.html" -not -path "./myapp/*" -exec cp {} myapp/www/index.html \;
+          find . -maxdepth 2 -name "google-services.json" -not -path "./myapp/*" -exec cp {} myapp/google-services.json \;
+          [ -d "src" ] && cp -r src myapp/
           
-          # نقل مجلد الكود المصدري للجافا
-          if [ -d "src" ]; then cp -r src myapp/; fi
-
           cd myapp
           
-          # 5. إضافة المنصة (أندرويد 13 لضمان عمل الحظر)
+          # 6. إضافة المنصة والإضافات
           cordova platform add android@13.0.0
-          
-          # 6. إضافة الإضافات اللازمة
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 7. بناء التطبيق
-          cordova build android --release -- --packageType=apk
-          
-          # 8. نقل الـ APK النهائي
-          find platforms/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall.apk \;
+          # 7. إعداد ملف build.json (استخدام المسار المطلق للمفتاح)
+          # هنا حل المشكلة: أخبرنا نظام أندرويد بالبحث عن المفتاح في المسار الصحيح
+          echo "{\"android\": {\"release\": {\"keystore\": \"$GITHUB_WORKSPACE/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
-      - name: Upload APK
+          # 8. بناء APK
+          echo "Building APK..."
+          cordova build android --release --buildConfig=build.json -- --packageType=apk
+          
+          # 9. استخراج النتائج
+          find platforms/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
+          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Build
+          name: Safety-Call-Japan-Build
           path: ${{ github.workspace }}/FINAL_ARTIFACTS/
