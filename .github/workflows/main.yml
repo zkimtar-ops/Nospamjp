@@ -1,4 +1,4 @@
-name: Safety_Japan_Final_Success
+name: Safety_Call_Japan_Full_Package
 
 on:
   push:
@@ -18,70 +18,71 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build All Artifacts
+      - name: Build Android App
         run: |
-          # 1. تثبيت كوردوفا
-          npm install -g cordova
+          # 1. تثبيت كوردوفا وتجهيز البيئة
+          npm install -g cordova --no-audit
+          rm -rf node_modules package-lock.json platforms plugins
           
-          # 2. إنشاء مجلد المخرجات النهائي فوراً
-          mkdir -p $GITHUB_WORKSPACE/FINAL_PACKAGE
-          
-          # 3. إنشاء المفتاح الرقمي (JKS) في المجلد الرئيسي
-          keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.jks \
-            -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass 123456 -keypass 123456 \
-            -dname "CN=Zakaria" -deststoretype pkcs12
-          
-          # نسخ المفتاح للخزنة فوراً
-          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_PACKAGE/safety_key.jks
-
-          # 4. إنشاء مشروع نظيف
+          # 2. إنشاء مجلد المشروع ونقل الملفات (لضمان بقاء اسم التطبيق كما هو)
           cordova create build_dir com.nospam.japan "Safety Call Japan"
-          
-          # 5. نقل ملفاتك
           cp config.xml build_dir/config.xml
           mkdir -p build_dir/www
           cp -r www/* build_dir/www/
           [ -f "google-services.json" ] && cp google-services.json build_dir/google-services.json
           
           cd build_dir
-          
-          # 6. التراخيص والمنصة والإضافات
-          yes | sdkmanager --licenses || true
-          cordova platform add android@13.0.0
-          cordova plugin add cordova-plugin-android-permissions
-          cordova plugin add cordova-plugin-firebasex@16.1.0
-          cordova plugin add cordova-plugin-androidx-adapter
-          cordova plugin add com-darryncampbell-cordova-plugin-intent
-          
-          # 7. إعداد ملف التوقيع
-          echo "{
-            \"android\": {
-              \"release\": {
-                \"keystore\": \"$GITHUB_WORKSPACE/release.jks\",
-                \"storePassword\": \"123456\",
-                \"alias\": \"safety_key\",
-                \"password\": \"123456\"
-              }
-            }
-          }" > build.json
 
-          # 8. بناء الـ APK واستخراجه باستخدام المسار المباشر للمخرجات
+          # 3. إضافة المنصة والإضافات (بدون تغيير أي صلاحيات أو أدونات)
+          cordova platform add android@13.0.0 --save
+          cordova plugin add cordova-plugin-android-permissions --save
+          cordova plugin add cordova-plugin-firebasex@16.1.0 --save
+          cordova plugin add cordova-plugin-androidx-adapter --save
+          cordova plugin add com-darryncampbell-cordova-plugin-intent --save
+          cordova plugin add cordova-plugin-device --save
+          
+          cordova prepare android
+          
+          # 4. إنشاء مفتاح التوقيع الدائم (بنفس بياناتك الأصلية)
+          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria, O=SafetyCallJapan" -deststoretype pkcs12
+
+          # 5. إعداد ملف التوقيع
+          cat <<EOF > build.json
+          {
+              "android": {
+                  "release": {
+                      "keystore": "release.jks",
+                      "storePassword": "123456",
+                      "alias": "safety_key",
+                      "password": "123456"
+                  }
+              }
+          }
+          EOF
+
+          # 6. بناء APK و AAB معاً باستخدام طريقة البناء المطلوبة
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_PACKAGE/SafetyCall_Install.apk \;
-
-          # 9. بناء الـ AAB واستخراجه باستخدام المسار المباشر للمخرجات
+          
           echo "Building AAB..."
           cordova build android --release --buildConfig=build.json -- --packageType=bundle
-          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_PACKAGE/SafetyCall_PlayStore.aab \;
 
-      - name: Upload Safety Package
+          # 7. استخراج كافة الملفات إلى المجلد النهائي
+          mkdir -p ../output
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/SafetyCall_Install.apk
+          cp platforms/android/app/build/outputs/bundle/release/*.aab ../output/SafetyCall_PlayStore.aab
+          cp release.jks ../output/safety_key.jks
+
+      - name: Upload Full Package
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Japan-All-Files
-          path: FINAL_PACKAGE/
-          if-no-files-found: error
+          name: SafeCall-Japan-Full-Package
+          path: output/
