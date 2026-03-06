@@ -1,4 +1,4 @@
-name: Safety_Japan_Final_Success
+name: Safety_Japan_Success_Build
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Build Process
+      - name: Build and Extract
         run: |
           # 1. تثبيت كوردوفا
           npm install -g cordova
@@ -21,39 +21,36 @@ jobs:
           mkdir -p $GITHUB_WORKSPACE/FINAL_ARTIFACTS
           
           # 3. إنشاء المشروع
-          # نستخدم --template لضمان عدم وجود ملفات تعارض
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 4. نقل الملفات باستخدام المسار المطلق للمستودع $GITHUB_WORKSPACE
-          # هذا يضمن أن النظام يجد الملف حتى لو تغير المجلد الحالي
-          cp -f $GITHUB_WORKSPACE/config.xml myapp/config.xml
-          cp -f $GITHUB_WORKSPACE/index.html myapp/www/index.html
-          cp -f $GITHUB_WORKSPACE/google-services.json myapp/google-services.json || echo "Firebase file not found"
+          # 4. البحث عن الملفات ونقلها (حتى لو كانت داخل مجلدات فرعية)
+          # هذا الأمر سيبحث عن index.html في كل المستودع وينسخه للمكان الصحيح
+          find . -name "index.html" -not -path "./myapp/*" -exec cp {} myapp/www/index.html \;
+          find . -name "config.xml" -not -path "./myapp/*" -exec cp {} myapp/config.xml \;
+          find . -name "google-services.json" -not -path "./myapp/*" -exec cp {} myapp/google-services.json \;
           
-          # التأكد من نقل مجلد src الذي يحتوي على CallBlockerService.java
-          if [ -d "$GITHUB_WORKSPACE/src" ]; then
-            cp -r $GITHUB_WORKSPACE/src myapp/
-          fi
+          # نقل مجلد الكود المصدري للجافا
+          if [ -d "src" ]; then cp -r src myapp/; fi
 
           cd myapp
           
-          # 5. إضافة المنصة (مهم جداً استخدام الإصدار 13 ليتوافق مع أندرويد الحديث)
+          # 5. إضافة المنصة (أندرويد 13 لضمان عمل الحظر)
           cordova platform add android@13.0.0
           
-          # 6. إضافة الإضافات
+          # 6. إضافة الإضافات اللازمة
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 7. بناء التطبيق (توقيع تلقائي مؤقت للتجربة)
+          # 7. بناء التطبيق
           cordova build android --release -- --packageType=apk
           
-          # 8. نقل الـ APK المخرج
+          # 8. نقل الـ APK النهائي
           find platforms/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall.apk \;
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SafetyCall-Package
+          name: Safety-Call-Build
           path: ${{ github.workspace }}/FINAL_ARTIFACTS/
