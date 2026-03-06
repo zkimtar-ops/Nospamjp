@@ -57,12 +57,13 @@ jobs:
           # هنا حل المشكلة: أخبرنا نظام أندرويد بالبحث عن المفتاح في المسار الصحيح
           echo "{\"android\": {\"release\": {\"keystore\": \"$GITHUB_WORKSPACE/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
-          # 8. بناء APK
+                    # 8. بناء APK
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
-          # 9. استخراج النتائج
-          find platforms/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
+          # 9. استخراج النتائج (استخدام find في كل مجلد المشروع لضمان إيجاد الـ APK)
+          echo "Moving final files..."
+          find . -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
           cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
 
       - name: Upload Artifacts
