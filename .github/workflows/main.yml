@@ -28,12 +28,13 @@ jobs:
 
       - name: Build Android App
         run: |
-          # 1. تثبيت كوردوفا وتجهيز البيئة
+          # 1. تثبيت كوردوفا
           npm install -g cordova --no-audit
-          rm -rf node_modules package-lock.json platforms plugins
           
-          # 2. إنشاء مجلد المشروع والحفاظ على الاسم والهوية
+          # 2. إنشاء مشروع نظيف بنفس الهوية والاسم
           cordova create build_dir com.nospam.japan "Safety Call Japan"
+          
+          # 3. نقل الملفات الأساسية
           cp config.xml build_dir/config.xml
           mkdir -p build_dir/www
           cp -r www/* build_dir/www/
@@ -41,7 +42,7 @@ jobs:
           
           cd build_dir
 
-          # 3. إضافة المنصة والإضافات الأصلية (التي طلبتها بدقة)
+          # 4. إضافة المنصة والإضافات المطلوبة (بدون تغيير الصلاحيات)
           cordova platform add android@13.0.0 --save
           cordova plugin add cordova-plugin-android-permissions --save
           cordova plugin add cordova-plugin-firebasex@16.1.0 --save
@@ -50,10 +51,10 @@ jobs:
           
           cordova prepare android
           
-          # 4. إنشاء مفتاح التوقيع الدائم (بنفس بيانات Zakaria)
+          # 5. إنشاء مفتاح التوقيع (بيانات Zakaria)
           keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
 
-          # 5. إعداد ملف التوقيع البرمجي
+          # 6. ملف إعدادات البناء
           cat <<EOF > build.json
           {
               "android": {
@@ -67,19 +68,21 @@ jobs:
           }
           EOF
 
-          # 6. بناء التطبيق بصيغتي APK و AAB
+          # 7. بناء التطبيق
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
           echo "Building AAB..."
           cordova build android --release --buildConfig=build.json -- --packageType=bundle
 
-          # 7. استخراج الملفات للمجلد النهائي (خارج build_dir)
+          # 8. استخراج الملفات (استخدام مسارات نسبية لضمان النجاح)
           mkdir -p ../output
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ../output/SafetyCall_Install.apk \;
-          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ../output/SafetyCall_PlayStore.aab \;
+          cp platforms/android/app/build/outputs/apk/release/*.apk ../output/SafetyCall_Install.apk
+          cp platforms/android/app/build/outputs/bundle/release/*.aab ../output/SafetyCall_PlayStore.aab
           cp release.jks ../output/safety_key.jks
 
       - name: Upload Full Package
         uses: actions/upload-artifact@v4
-  
+        with:
+          name: SafeCall-Japan-Full-Package
+          path: output/
