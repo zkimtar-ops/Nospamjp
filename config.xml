@@ -2,7 +2,7 @@
 <widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>Safety Call Japan</name>
     <description>نظام حماية المكالمات المتقدم</description>
-    <author email="dev@safetycall.jp">Zakaria</author>
+    <author email="dev@nospam.jp">Zakaria</author>
     
     <content src="index.html" />
     <preference name="AndroidXEnabled" value="true" />
@@ -14,7 +14,19 @@
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
             <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
             <uses-permission android:name="android.permission.READ_CALL_LOG" />
-            <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+            <uses-permission android:name="android.permission.BIND_CALL_SCREENING_SERVICE" />
+        </config-file>
+
+        <!-- تسجيل الخدمة رسمياً لكي يظهر التطبيق في قائمة "التطبيقات الافتراضية" -->
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+            <service android:name="com.nospam.japan.CallBlockerService"
+                     android:permission="android.permission.BIND_CALL_SCREENING_SERVICE"
+                     android:exported="true">
+                <intent-filter>
+                    <action android:name="android.telecom.CallScreeningService" />
+                </intent-filter>
+            </service>
         </config-file>
     </platform>
 
