@@ -41,6 +41,15 @@ jobs:
           # 4. إنشاء مشروع نظيف تماماً
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
+          # +++ أضف الأسطر التالية هنا مباشرة +++
+          cp -r src myapp/src
+          cp google-services.json myapp/google-services.json
+          cp index.html myapp/www/index.html
+          # +++++++++++++++++++++++++++++++++++++
+          
+          cd myapp
+  
+          
           # 5. نقل ملفاتك الأساسية
           cp config.xml myapp/config.xml
           mkdir -p myapp/www
