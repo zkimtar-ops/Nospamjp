@@ -10,6 +10,8 @@
     <platform name="android">
         <resource-file src="google-services.json" target="app/google-services.json" />
         
+       <source-file src="src/android/CallBlockerService.java" target-dir="src/com/nospam/japan" />
+        
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
             <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
