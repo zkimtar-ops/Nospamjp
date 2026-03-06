@@ -1,4 +1,4 @@
-name: Safety_Japan_Final_Success_Package
+name: Safety_Japan_Success_Build
 
 on:
   push:
@@ -35,23 +35,16 @@ jobs:
             -storepass 123456 -keypass 123456 \
             -dname "CN=Zakaria" -deststoretype pkcs12
           
-          # 4. إنشاء مشروع كوردوفا في مجلد منفصل
+          # 4. إنشاء مشروع كوردوفا
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 5. نقل الملفات من المستودع إلى داخل مجلد المشروع 'myapp'
-          # تأكد أن هذه الملفات موجودة في المجلد الرئيسي لمستودعك على GitHub
-          cp -f config.xml myapp/config.xml
-          cp -f index.html myapp/www/index.html
-          cp -f google-services.json myapp/google-services.json || echo "Firebase file not found"
+          # 5. نقل الملفات (استخدام find لضمان إيجاد الملفات أينما كانت)
+          find . -maxdepth 2 -name "config.xml" -exec cp {} myapp/config.xml \;
+          find . -maxdepth 2 -name "index.html" -exec cp {} myapp/www/index.html \;
+          find . -maxdepth 2 -name "google-services.json" -exec cp {} myapp/google-services.json \;
           
-          # نقل مجلد src الذي يحتوي على ملف الجافا الخاص بالحظر
-          if [ -d "src" ]; then
-            cp -r src myapp/
-            echo "Source directory moved successfully."
-          else
-            echo "Error: 'src' directory not found in repository root."
-            exit 1
-          fi
+          # نقل مجلد src
+          if [ -d "src" ]; then cp -r src myapp/; fi
           
           cd myapp
           
@@ -62,13 +55,13 @@ jobs:
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 7. إعداد ملف التوقيع
+          # 7. إعداد ملف build.json
           echo "{\"android\": {\"release\": {\"keystore\": \"$GITHUB_WORKSPACE/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
           # 8. بناء APK
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
-          # 9. استخراج النتائج والمفتاح الرقمي
+          # 9. استخراج النتائج
           find platforms/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
           cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
 
