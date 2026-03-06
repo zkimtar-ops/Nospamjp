@@ -1,4 +1,4 @@
-name: Safety_Japan_Final_Success_Package
+name: Safety_Japan_Ultimate_Build_Final
 
 on:
   push:
@@ -21,59 +21,59 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build and Force Extract
+      - name: Build and Extract Package
         run: |
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء مجلد المخرجات في مكان ثابت ومطلق
+          # 2. إنشاء مجلد ثابت للمخرجات لضمان عدم الضياع
           mkdir -p $GITHUB_WORKSPACE/FINAL_ARTIFACTS
           
-          # 3. إنشاء المفتاح الرقمي (JKS)
+          # 3. إنشاء مفتاح التوقيع الرقمي
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.jks \
             -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass 123456 -keypass 123456 \
             -dname "CN=Zakaria" -deststoretype pkcs12
           
-          # نسخ المفتاح فوراً للمجلد النهائي
+          # نسخ المفتاح للمجلد النهائي
           cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
 
-          # 4. إنشاء المشروع في مجلد منفصل لضمان نظافة البيئة
+          # 4. إنشاء مشروع نظيف تماماً
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 5. نقل ملفاتك (config.xml, index.html, google-services.json)
-          [ -f "config.xml" ] && cp config.xml myapp/config.xml
+          # 5. نقل ملفاتك الأساسية
+          cp config.xml myapp/config.xml
           mkdir -p myapp/www
-          if [ -d "www" ]; then cp -r www/* myapp/www/; else cp index.html myapp/www/index.html; fi
+          cp -r www/* myapp/www/
           [ -f "google-services.json" ] && cp google-services.json myapp/google-services.json
           
           cd myapp
           
-          # 6. التراخيص والمنصة والإضافات (تشمل إضافة Intent لفتح الإعدادات)
+          # 6. قبول التراخيص وإضافة المنصة
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
+          
+          # 7. إضافة الإضافات (مهم جداً: إضافة Intent هي التي تحل مشكلة بقاء الرسالة)
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 7. إعداد ملف build.json
+          # 8. إعداد ملف التوقيع البرمجي
           echo "{\"android\": {\"release\": {\"keystore\": \"$GITHUB_WORKSPACE/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
-          # 8. بناء APK واستخراجه (بحث شامل في كل المجلدات)
+          # 9. بناء APK والبحث عنه في كل السيرفر لضمان إيجاده
           echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
-          find $GITHUB_WORKSPACE -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
+          find /home/runner/work/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
 
-          # 9. بناء AAB واستخراجه (بحث شامل في كل المجلدات)
+          # 10. بناء AAB والبحث عنه
           echo "Building AAB..."
           cordova build android --release --buildConfig=build.json -- --packageType=bundle
-          find $GITHUB_WORKSPACE -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_PlayStore.aab \;
+          find /home/runner/work/ -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_PlayStore.aab \;
 
-      - name: Upload Safety Package
+      - name: Upload Final Package
         uses: actions/upload-artifact@v4
         with:
-          name: Safety-Call-Japan-All-Files
-          # الرفع من المجلد الذي لا يمكن للأندرويد مسحه
+          name: Safety-Call-Japan-Full-Package
           path: FINAL_ARTIFACTS/
-          if-no-files-found: error
