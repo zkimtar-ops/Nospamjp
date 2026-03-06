@@ -2,88 +2,74 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Safety Call Japan</title>
     <style>
-        :root { --danger: #c0392b; --success: #27ae60; --dark: #2c3e50; }
-        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .card { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 85%; max-width: 400px; text-align: center; }
-        .icon { font-size: 60px; margin-bottom: 20px; color: var(--danger); transition: 0.5s; }
-        h1 { font-size: 22px; color: var(--dark); margin: 10px 0; }
-        p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 25px; }
-        .btn { background: var(--danger); color: white; border: none; padding: 16px; border-radius: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(192, 57, 43, 0.2); }
-        .btn:disabled { background: #ccc; box-shadow: none; }
-        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 15px; }
-        .status-pending { background: #fff3cd; color: #856404; }
-        .status-granted { background: #d4edda; color: #155724; }
+        :root { --primary: #c0392b; --success: #27ae60; --dark: #333; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fdfdfd; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .card { background: white; width: 88%; max-width: 400px; padding: 40px; border-radius: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.08); text-align: center; border: 1px solid #f0f0f0; }
+        .status-icon { font-size: 70px; margin-bottom: 20px; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        h1 { font-size: 24px; color: var(--dark); margin: 0 0 10px; }
+        p { color: #777; font-size: 15px; line-height: 1.6; margin-bottom: 30px; }
+        .btn-action { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 16px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 20px rgba(192, 57, 43, 0.2); }
+        .btn-action:active { transform: scale(0.96); }
+        .btn-success { background: var(--success); box-shadow: 0 8px 20px rgba(39, 174, 96, 0.2); }
+        #log-status { margin-top: 20px; font-size: 13px; color: #aaa; font-weight: 500; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <div id="hero-icon" class="icon">🛡️</div>
-        <h1>حماية المكالمات اليابانية</h1>
-        <p id="info-text">للبدء، نحتاج لتفعيل صلاحيات النظام لتمكين حظر الأرقام المزعجة تلقائياً.</p>
+        <div id="ui-icon" class="status-icon">🛡️</div>
+        <h1 id="ui-title">درع حماية اليابان</h1>
+        <p id="ui-desc">اضغط على الزر لتفعيل الحماية الذكية. سيطلب منك النظام اختيار التطبيق كحامي افتراضي للمكالمات.</p>
         
-        <button id="main-btn" class="btn" onclick="processPermissions()">تفعيل الحماية</button>
+        <button id="ui-btn" class="btn-action" onclick="initActivation()">تفعيل الحماية الآن</button>
         
-        <div id="status-label" class="status-badge status-pending">الصلاحيات مطلوبة</div>
+        <div id="log-status">جاهز للبدء</div>
     </div>
 
     <script src="cordova.js"></script>
     <script>
-        const REQUIRED_PERMISSIONS = [
-            "android.permission.READ_PHONE_STATE",
-            "android.permission.ANSWER_PHONE_CALLS",
-            "android.permission.READ_CALL_LOG"
-        ];
+        document.addEventListener('deviceready', checkStatus, false);
 
-        document.addEventListener('deviceready', () => {
-            checkPermissionsSilently();
-        }, false);
-
-        function checkPermissionsSilently() {
-            const permissions = cordova.plugins.permissions;
-            permissions.hasPermission(REQUIRED_PERMISSIONS[0], (status) => {
+        function checkStatus() {
+            // فحص صامت عند فتح التطبيق
+            var permissions = cordova.plugins.permissions;
+            permissions.hasPermission("android.permission.READ_PHONE_STATE", function(status) {
                 if (status.hasPermission) {
-                    updateUI(true);
+                    setUIActive();
                 }
             });
         }
 
-        function updateUI(isGranted) {
-            const label = document.getElementById('status-label');
-            const icon = document.getElementById('hero-icon');
-            const btn = document.getElementById('main-btn');
-            const info = document.getElementById('info-text');
+        function initActivation() {
+            var permissions = cordova.plugins.permissions;
+            var list = [
+                permissions.READ_PHONE_STATE,
+                permissions.ANSWER_PHONE_CALLS,
+                permissions.READ_CALL_LOG
+            ];
 
-            if (isGranted) {
-                label.innerText = "الحماية مفعلة ✅";
-                label.className = "status-badge status-granted";
-                icon.style.color = "var(--success)";
-                btn.innerText = "التطبيق يعمل كحارس";
-                btn.disabled = true;
-                info.innerText = "التطبيق يقوم الآن بفحص المكالمات الواردة وحظر المزعجين عبر Firebase.";
-            }
-        }
+            updateLog("جاري فحص الصلاحيات...");
 
-        function processPermissions() {
-            const permissions = cordova.plugins.permissions;
-            
-            permissions.requestPermissions(REQUIRED_PERMISSIONS, (status) => {
+            permissions.requestPermissions(list, function(status) {
                 if (status.hasPermission) {
-                    // بعد قبول الصلاحيات، نطلب تعيين التطبيق كافتراضي
+                    updateLog("تم قبول الصلاحيات ✅");
+                    // الخطوة الحاسمة: طلب تعيين التطبيق كافتراضي
                     requestRole();
                 } else {
-                    alert("يجب قبول جميع الصلاحيات ليعمل التطبيق. يرجى المحاولة مرة أخرى.");
+                    updateLog("يرجى قبول كافة الصلاحيات ❌");
                 }
-            }, () => {
-                alert("حدث خطأ في النظام أثناء طلب الصلاحيات.");
+            }, function() {
+                updateLog("خطأ في الاتصال بالنظام");
             });
         }
 
         function requestRole() {
-            // هذا الجزء يحل مشكلة بقاء الرسالة عبر طلب "الدور" الرسمي من أندرويد
+            updateLog("يرجى تعيين التطبيق كافتراضي...");
+            
+            // استدعاء نافذة النظام (تطلب إضافة Intent Plugin التي أضفناها لـ main.yml)
             if (window.plugins && window.plugins.intentShim) {
                 window.plugins.intentShim.startActivityForResult(
                     {
@@ -92,18 +78,33 @@
                             "android.app.role.extra.ROLE_NAME": "android.app.role.CALL_SCREENING"
                         }
                     },
-                    (result) => {
-                        updateUI(true);
+                    function() { 
+                        setUIActive();
+                        updateLog("الحماية نشطة تماماً ✅");
                     },
-                    (err) => {
-                        // إذا فشل الطلب التلقائي، نوجه المستخدم لفتحها يدوياً
-                        updateUI(true); // نعتبرها مفعلة لأن الصلاحيات تم قبولها
-                        alert("تم قبول الصلاحيات. يرجى التأكد من تعيين التطبيق كافتراضي في إعدادات الهاتف لضمان الحظر.");
+                    function() { 
+                        updateLog("تنبيه: يجب الاختيار يدوياً ⚠️");
+                        setUIActive(); // نحدث الواجهة على أي حال لأن الصلاحيات تم قبولها
                     }
                 );
             } else {
-                updateUI(true);
+                setUIActive();
             }
+        }
+
+        function setUIActive() {
+            document.getElementById('ui-icon').innerText = "✅";
+            document.getElementById('ui-icon').style.color = "var(--success)";
+            document.getElementById('ui-title').innerText = "الحماية مفعلة";
+            document.getElementById('ui-desc').innerText = "التطبيق يقوم الآن بفحص وحظر المكالمات المزعجة تلقائياً عبر Firebase.";
+            document.getElementById('ui-btn').innerText = "تم التفعيل بنجاح";
+            document.getElementById('ui-btn').classList.add('btn-success');
+            document.getElementById('ui-btn').disabled = true;
+            document.getElementById('log-status').innerText = "يعمل في الخلفية";
+        }
+
+        function updateLog(msg) {
+            document.getElementById('log-status').innerText = msg;
         }
     </script>
 </body>
