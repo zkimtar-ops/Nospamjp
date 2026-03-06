@@ -35,19 +35,22 @@ jobs:
             -storepass 123456 -keypass 123456 \
             -dname "CN=Zakaria" -deststoretype pkcs12
           
-          # 4. إنشاء مشروع كوردوفا
-          # لاحظ أننا ننشئ المشروع في مجلد 'myapp'
+          # 4. إنشاء مشروع كوردوفا في مجلد منفصل
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 5. نقل الملفات بحذر (هنا حل المشكلة)
-          # نقوم بنسخ الملفات من المجلد الرئيسي للمستودع إلى داخل مجلد 'myapp'
+          # 5. نقل الملفات من المستودع إلى داخل مجلد المشروع 'myapp'
+          # تأكد أن هذه الملفات موجودة في المجلد الرئيسي لمستودعك على GitHub
           cp -f config.xml myapp/config.xml
           cp -f index.html myapp/www/index.html
-          cp -f google-services.json myapp/google-services.json || echo "Firebase file not found, skipping..."
+          cp -f google-services.json myapp/google-services.json || echo "Firebase file not found"
           
-          # التأكد من وجود مجلد src ونقله
+          # نقل مجلد src الذي يحتوي على ملف الجافا الخاص بالحظر
           if [ -d "src" ]; then
             cp -r src myapp/
+            echo "Source directory moved successfully."
+          else
+            echo "Error: 'src' directory not found in repository root."
+            exit 1
           fi
           
           cd myapp
@@ -65,7 +68,7 @@ jobs:
           # 8. بناء APK
           cordova build android --release --buildConfig=build.json -- --packageType=apk
           
-          # 9. نقل النتائج للمجلد النهائي
+          # 9. استخراج النتائج والمفتاح الرقمي
           find platforms/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
           cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
 
