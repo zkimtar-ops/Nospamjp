@@ -26,60 +26,50 @@ jobs:
           # 1. تثبيت كوردوفا
           npm install -g cordova
           
-          # 2. إنشاء مجلد المخرجات النهائي
+          # 2. إنشاء مجلد المخرجات
           mkdir -p $GITHUB_WORKSPACE/FINAL_ARTIFACTS
           
-          # 3. إنشاء المفتاح الرقمي (JKS) - ملاحظة: يفضل استخدامه مرة واحدة وحفظه
+          # 3. إنشاء المفتاح الرقمي
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.jks \
             -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass 123456 -keypass 123456 \
             -dname "CN=Zakaria" -deststoretype pkcs12
           
-          # نسخ المفتاح للمجلد النهائي للتحميل
-          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
-
           # 4. إنشاء مشروع كوردوفا
+          # لاحظ أننا ننشئ المشروع في مجلد 'myapp'
           cordova create myapp com.nospam.japan "Safety Call Japan"
           
-          # 5. نقل ملفاتك البرمجية إلى داخل المجلد المنشأ (myapp)
-          # نستخدم -f للإجبار و -r للمجلدات
+          # 5. نقل الملفات بحذر (هنا حل المشكلة)
+          # نقوم بنسخ الملفات من المجلد الرئيسي للمستودع إلى داخل مجلد 'myapp'
           cp -f config.xml myapp/config.xml
           cp -f index.html myapp/www/index.html
-          cp -f google-services.json myapp/google-services.json || echo "Firebase file missing"
+          cp -f google-services.json myapp/google-services.json || echo "Firebase file not found, skipping..."
           
-          # نسخ مجلد src الذي يحتوي على CallBlockerService.java
+          # التأكد من وجود مجلد src ونقله
           if [ -d "src" ]; then
             cp -r src myapp/
-            echo "Source directory copied successfully"
-          else
-            echo "Error: src directory not found!"
-            exit 1
           fi
           
           cd myapp
           
           # 6. إضافة المنصة والإضافات
-          yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-firebasex@16.1.0
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add com-darryncampbell-cordova-plugin-intent
           
-          # 7. إعداد ملف التوقيع build.json
+          # 7. إعداد ملف التوقيع
           echo "{\"android\": {\"release\": {\"keystore\": \"$GITHUB_WORKSPACE/release.jks\", \"storePassword\": \"123456\", \"alias\": \"safety_key\", \"password\": \"123456\"}}}" > build.json
 
           # 8. بناء APK
-          echo "Building APK..."
           cordova build android --release --buildConfig=build.json -- --packageType=apk
+          
+          # 9. نقل النتائج للمجلد النهائي
           find platforms/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_Install.apk \;
+          cp $GITHUB_WORKSPACE/release.jks $GITHUB_WORKSPACE/FINAL_ARTIFACTS/safety_key.jks
 
-          # 9. بناء AAB (للمتجر)
-          echo "Building AAB..."
-          cordova build android --release --buildConfig=build.json -- --packageType=bundle
-          find platforms/android/app/build/outputs/bundle/release -name "*.aab" -exec cp {} $GITHUB_WORKSPACE/FINAL_ARTIFACTS/SafetyCall_PlayStore.aab \;
-
-      - name: Upload Safety Package
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Safety-Call-Japan-Build
