@@ -1,5 +1,4 @@
-name: Final_Build_System
-
+Name: SOS Japan Final Success
 on:
   push:
     branches: [ main ]
@@ -18,30 +17,62 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build APK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build and Sign Everything
         run: |
           npm install -g cordova
+          
+          # 1. تأمين ملفاتك من المستودع
+          mkdir -p my_source
+          if [ -d "Apk/www" ]; then
+            cp -r Apk/www/* my_source/
+          elif [ -d "www" ]; then
+            cp -r www/* my_source/
+          fi
+          
+          # 2. إنشاء مشروع كوردوفا جديد بالاسم الجديد
+          rm -rf platforms plugins www config.xml package.json
+          cordova create myapp com.nospam.japan "SOS Japan Pro"
+          cp -r myapp/. .
+          rm -rf myapp
+          
+          # 3. إضافة المحركات اللازمة
+          cordova plugin add cordova-plugin-geolocation
+          cordova plugin add cordova-plugin-dialogs
+          cordova plugin add cordova-plugin-android-permissions
+          cordova plugin add cordova-plugin-call-trap
+          
+          # 4. استعادة ملفات الـ HTML والـ JS
+          rm -rf www/*
+          cp -r my_source/* www/
+          
+          # 5. إصلاح الصلاحيات في config.xml
+          sed -i '/<\/widget>/i \    <access origin="*" />\n    <allow-intent href="tel:*" />\n    <allow-intent href="sms:*" />\n    <allow-intent href="line:*" />\n    <allow-navigation href="*" />\n    <platform name="android">\n        <config-file target="AndroidManifest.xml" parent="/*">\n            <uses-permission android:name="android.permission.READ_PHONE_STATE" />\n            <uses-permission android:name="android.permission.READ_CALL_LOG" />\n        </config-file>\n    </platform>' config.xml
+          
+          # 6. البناء والتوقيع (نفس الخطوات الأخيرة لاستخراج الملفات)
+          yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
-          # تثبيت الإضافات
-          cordova plugin add cordova-plugin-android-permissions
-          cordova plugin add cordova-plugin-device
-          cordova plugin add cordova-plugin-androidx-adapter
-          cordova plugin add cordova-open-native-settings
-          cordova plugin add com-darryncampbell-cordova-plugin-intent
+          keytool -genkey -v -keystore release.jks -alias zakaria_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
           
-          cordova prepare android
-          
-          # توقيع التطبيق
-          keytool -genkey -v -keystore release.jks -alias safety_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
+          cat <<EOF > build.json
+          { "android": { "release": { "keystore": "release.jks", "storePassword": "123456", "alias": "zakaria_key", "password": "123456" } } }
+          EOF
 
-          cordova build android --release -- --packageType=apk
+          cordova build android --release --device --buildConfig=build.json -- --packageType=apk
+          cordova build android --release --device --buildConfig=build.json -- --packageType=bundle
           
-          mkdir output
-          cp platforms/android/app/build/outputs/apk/release/*.apk ./output/Safety_Call_Final.apk
+          # استخراج الملفات النهائية كما هي في كودك الأصلي
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ./SOS_Japan_Final_Pro.apk \;
+          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ./SOS_Japan_Final_Pro.aab \;
 
-      - name: Upload Artifact
+      - name: Upload Final Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Final-App-Build
-          path: output/
+          name: SOS-Japan-Final-Pro
+          path: |
+            *.apk
+            *.aab
+            release.jks
