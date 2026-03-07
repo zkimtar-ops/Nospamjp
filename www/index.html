@@ -2,64 +2,25 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Safety Call Japan</title>
-    <script src="cordova.js"></script>
+    <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
+    <title>SOS Japan</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        .btn { background: #27ae60; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 18px; margin-top: 20px; cursor: pointer; }
-        .status { margin-top: 20px; color: #555; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #121212; color: #00ff00; }
+        .container { border: 2px solid #333; padding: 20px; border-radius: 10px; background: #1e1e1e; }
+        .status { color: #fff; margin-top: 10px; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h2>Japan Safety SOS</h2>
+        <p class="status" id="system-status">جاري تشغيل نظام الفحص...</p>
+        <div id="alert-box" style="color: red; font-weight: bold; margin-top: 20px;"></div>
+    </div>
 
-    <h2>Safety Call Japan</h2>
-    <p>لحماية هاتفك، يجب تفعيل خدمة حظر المكالمات</p>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
     
-    <button class="btn" onclick="activateProtection()">تفعيل الحماية الآن</button>
-    <div id="status" class="status">الحالة: غير مفعل</div>
-
-    <script>
-        document.addEventListener('deviceready', onDeviceReady, false);
-
-        function onDeviceReady() {
-            console.log("Cordova is ready");
-        }
-
-        function activateProtection() {
-            const statusDiv = document.getElementById('status');
-            
-            // 1. طلب صلاحيات الأدوار (Role Manager) - أندرويد 10 وأحدث
-            if (window.plugins && window.plugins.intentShim) {
-                
-                window.plugins.intentShim.startActivityForResult(
-                    {
-                        action: "android.app.role.action.REQUEST_ROLE",
-                        extras: {
-                            "android.app.role.extra.ROLE_NAME": "android.app.role.CALL_SCREENING"
-                        }
-                    },
-                    function(result) {
-                        statusDiv.innerText = "الحالة: تم طلب الصلاحية بنجاح";
-                        statusDiv.style.color = "green";
-                    },
-                    function(err) {
-                        // 2. إذا فشل الطلب المباشر (الخيار مخفي)، نفتح الإعدادات الافتراضية يدوياً
-                        console.log("Direct request failed, opening settings...");
-                        statusDiv.innerText = "يرجى اختيار التطبيق من قائمة 'Caller ID & Spam'";
-                        
-                        window.plugins.intentShim.startActivity(
-                            {
-                                action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
-                            },
-                            function() { console.log("Settings opened"); },
-                            function(e) { alert("لم نتمكن من فتح الإعدادات تلقائياً: " + e); }
-                        );
-                    }
-                );
-            } else {
-                alert("إضافة IntentShim غير مثبتة بشكل صحيح");
-            }
-        }
-    </script>
+    <script src="cordova.js"></script>
+    <script src="js/index.js"></script>
 </body>
 </html>
