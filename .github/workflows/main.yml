@@ -38,18 +38,19 @@ jobs:
           cp -r myapp/. .
           rm -rf myapp
           
-          # 3. إضافة الإضافات (استخدام حزم npm الرسمية المستقرة)
+          # 3. إضافة الإضافات (تم اختيار إضافات مستقرة جداً)
           cordova plugin add cordova-plugin-dialogs
           cordova plugin add cordova-plugin-android-permissions
-          # استخدام هذه النسخة المحددة لأنها متوفرة ومستقرة على npm
-          cordova plugin add cordova-plugin-calltrap-fork
+          # إضافة مخصصة لاستقبال أحداث الهاتف (هذا الرابط يعمل عادة في بيئات CI)
+          cordova plugin add https://github.com/mokesmokes/cordova-plugin-calltrap.git
           
           # 4. استعادة ملفات الـ HTML والـ JS
           rm -rf www/*
           cp -r my_source/* www/
           
           # 5. إصلاح الصلاحيات في config.xml
-          sed -i '/<\/widget>/i \    <access origin="*" />\n    <allow-intent href="tel:*" />\n    <allow-navigation href="*" />\n    <platform name="android">\n        <config-file target="AndroidManifest.xml" parent="/*">\n            <uses-permission android:name="android.permission.READ_PHONE_STATE" />\n            <uses-permission android:name="android.permission.READ_CALL_LOG" />\n        </config-file>\n    </platform>' config.xml
+          # إضافة الصلاحيات اللازمة للوصول لرقم المتصل وحالة الهاتف
+          sed -i '/<\/widget>/i \    <access origin="*" />\n    <allow-intent href="tel:*" />\n    <allow-navigation href="*" />\n    <platform name="android">\n        <config-file target="AndroidManifest.xml" parent="/*">\n            <uses-permission android:name="android.permission.READ_PHONE_STATE" />\n            <uses-permission android:name="android.permission.READ_CALL_LOG" />\n            <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />\n        </config-file>\n    </platform>' config.xml
           
           # 6. البناء والتوقيع
           yes | sdkmanager --licenses || true
