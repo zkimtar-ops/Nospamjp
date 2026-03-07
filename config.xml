@@ -1,29 +1,32 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+<widget id="safety.call.japan" version="1.1.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>Safety Call Japan</name>
-    <description>نظام حماية المكالمات المتقدم</description>
-    <author email="dev@nospam.jp">Zakaria</author>
+    <description>تطبيق حظر المكالمات الدولية لليابان - نسخة مستقرة</description>
     
     <content src="index.html" />
-    <preference name="AndroidXEnabled" value="true" />
+    
+    <!-- المكتبات المطلوبة للتحكم في الهاتف -->
+    <plugin name="cordova-plugin-android-permissions" spec="^1.1.5" />
+    <plugin name="cordova-plugin-device" spec="^2.1.0" />
+    <plugin name="cordova-plugin-androidx-adapter" spec="^1.1.3" />
+    <plugin name="cordova-open-native-settings" spec="^1.5.5" />
+    <plugin name="com-darryncampbell-cordova-plugin-intent" spec="^2.0.0" />
 
     <platform name="android">
-        <resource-file src="google-services.json" target="app/google-services.json" />
-        
-       <source-file src="src/android/CallBlockerService.java" target-dir="src/com/nospam/japan" />
-        
+        <!-- التصريح عن كافة صلاحيات أندرويد -->
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
             <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
             <uses-permission android:name="android.permission.READ_CALL_LOG" />
+            <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
             <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-            <uses-permission android:name="android.permission.BIND_CALL_SCREENING_SERVICE" />
+            <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
         </config-file>
 
-        <!-- تسجيل الخدمة رسمياً لكي يظهر التطبيق في قائمة "التطبيقات الافتراضية" -->
+        <!-- تعريف خدمة الفلترة التلقائية -->
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <service android:name="com.nospam.japan.CallBlockerService"
-                     android:permission="android.permission.BIND_CALL_SCREENING_SERVICE"
+            <service android:name="com.cordova.plugins.CallScreeningImplementation"
+                     android:permission="android.permission.BIND_SCREENING_SERVICE"
                      android:exported="true">
                 <intent-filter>
                     <action android:name="android.telecom.CallScreeningService" />
@@ -32,6 +35,6 @@
         </config-file>
     </platform>
 
-    <access origin="*" />
-    <allow-intent href="tel:*" />
+    <preference name="android-minSdkVersion" value="29" />
+    <preference name="android-targetSdkVersion" value="34" />
 </widget>
