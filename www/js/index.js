@@ -1,6 +1,6 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// إعدادات Firebase الخاصة بمشروعك Nospam-9a4af
+// إعدادات Firebase الخاصة بمشروعك (Nospam-9a4af)
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -17,83 +17,85 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 function onDeviceReady() {
-    console.log('تم تشغيل التطبيق وجاري تحضير نظام الحماية...');
+    console.log('التطبيق جاهز، جاري طلب الصلاحيات...');
     
-    // طلب صلاحيات الهاتف من المستخدم (ضروري لأندرويد 10 فما فوق)
     const permissions = cordova.plugins.permissions;
-    const permissionsList = [
+    const list = [
         permissions.READ_PHONE_STATE,
         permissions.READ_CALL_LOG
     ];
 
-    permissions.requestPermissions(permissionsList, (status) => {
+    permissions.requestPermissions(list, (status) => {
         if (status.hasPermission) {
-            console.log("تم الحصول على الصلاحيات بنجاح");
-            startCallListener();
+            setupCallListener();
         } else {
-            alert("يرجى تفعيل صلاحيات الهاتف لكي يتمكن التطبيق من اكتشاف الأرقام المزعجة.");
+            alert("صلاحيات الهاتف مطلوبة لاكتشاف الأرقام المزعجة.");
         }
     }, (error) => {
-        console.error("خطأ في طلب الصلاحيات: ", error);
+        console.error("خطأ في الصلاحيات:", error);
     });
 }
 
-function startCallListener() {
-    // الاستماع للمكالمات الواردة
-    // يدعم window.CallTrap أو window.calltrap حسب إصدار الـ Plugin
-    const trap = window.CallTrap || window.calltrap;
+function setupCallListener() {
+    // التحقق من وجود الإضافة
+    if (window.CallTrap) {
+        window.CallTrap.onCall(function(state) {
+            // التعامل مع الحالة سواء كانت كائن (Object) أو نص (String)
+            let callState = (typeof state === 'string') ? state : state.state;
+            let incomingNumber = state.number || "";
 
-    if (trap) {
-        trap.onCall(function(state) {
-            // الحالات: RINGING (يرن), OFFHOOK (مرفوع السمعة), IDLE (انتظار)
-            if (state.state === 'RINGING') {
-                const incomingNumber = state.number;
-                console.log("مكالمة واردة من: " + incomingNumber);
-                checkSpamList(incomingNumber);
+            console.log("حالة الاتصال الحالية: " + callState);
+
+            if (callState === 'RINGING') {
+                if (incomingNumber) {
+                    checkSpam(incomingNumber);
+                } else {
+                    console.log("تعذر قراءة رقم المتصل (قد يكون رقم خاص)");
+                }
             }
         });
     } else {
-        console.error("فشل في تحميل إضافة فحص المكالمات (CallTrap)");
+        console.error("إضافة CallTrap غير مثبتة بشكل صحيح.");
     }
 }
 
-function checkSpamList(phoneNumber) {
-    if (!phoneNumber) return;
+function checkSpam(phoneNumber) {
+    console.log("جاري فحص الرقم في قاعدة البيانات: " + phoneNumber);
+    
+    // تحديث الواجهة للعلم
+    const logDiv = document.getElementById('call-log');
+    if (logDiv) logDiv.innerText = "فحص الرقم: " + phoneNumber;
 
-    // تحديث الواجهة لعرض الرقم الذي يتم فحصه
-    const logElement = document.getElementById('call-log');
-    if (logElement) logElement.innerText = "يتم الآن فحص الرقم: " + phoneNumber;
-
-    // البحث في عقدة spam_numbers داخل Firebase
+    // البحث في Firebase داخل عقدة spam_numbers
+    // يجب أن تكون الأرقام مخزنة في Firebase كمفاتيح (Keys)
     database.ref('spam_numbers').child(phoneNumber).once('value', (snapshot) => {
         if (snapshot.exists()) {
-            // الرقم موجود في القائمة السوداء
-            showSpamWarning(phoneNumber);
+            triggerWarning(phoneNumber);
         } else {
-            console.log("الرقم آمن");
+            console.log("الرقم آمن.");
         }
-    }).catch((error) => {
-        console.error("خطأ في الاتصال بقاعدة البيانات: ", error);
+    }).catch((err) => {
+        console.error("خطأ في Firebase:", err);
     });
 }
 
-function showSpamWarning(number) {
-    // إرسال تنبيه صوتي (Beep)
+function triggerWarning(number) {
+    // تنبيه صوتي
     if (navigator.notification && navigator.notification.beep) {
         navigator.notification.beep(1);
     }
 
-    // إظهار رسالة تحذيرية للمستخدم
+    // رسالة تنبيه تظهر للمستخدم
     navigator.notification.alert(
-        "هذا الرقم (" + number + ") مصنف كـ رقم مزعج في اليابان. يرجى الحذر قبل الرد.",
+        "تنبيه: الرقم " + number + " مدرج ضمن الأرقام المزعجة في اليابان!",
         null,
-        "⚠️ تنبيه حماية (Japan SOS)",
-        "فهمت"
+        "⚠️ رقم مزعج (Japan SOS)",
+        "موافق"
     );
 
-    // تحديث الواجهة
-    const logElement = document.getElementById('call-log');
-    if (logElement) {
-        logElement.innerHTML = "<b style='color:#ff4444'>تحذير: رقم مزعج! </b><br>" + number;
+    // تحديث النص في الصفحة
+    const logDiv = document.getElementById('call-log');
+    if (logDiv) {
+        logDiv.innerHTML = "<b style='color:red'>تحذير! متصل مزعج: </b>" + number;
     }
 }
