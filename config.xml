@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>SOS Japan Pro</name>
+    <description>تطبيق حماية اليابان من الأرقام المزعجة</description>
+    <author email="dev@zakaria.com" href="http://zakaria.com">Zakaria</author>
+    
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="tel:*" />
+    <allow-navigation href="*" />
+
+    <platform name="android">
+        <preference name="AndroidXEnabled" value="true" />
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+            <uses-permission android:name="android.permission.READ_CALL_LOG" />
+        </config-file>
+    </platform>
+</widget>
