@@ -7,14 +7,19 @@
     <content src="index.html" />
     <access origin="*" />
     <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="line:*" />
     <allow-navigation href="*" />
 
     <platform name="android">
         <preference name="AndroidXEnabled" value="true" />
+        <preference name="android-minSdkVersion" value="26" />
+        
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
             <uses-permission android:name="android.permission.READ_CALL_LOG" />
+            <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
             <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
             <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
         </config-file>
