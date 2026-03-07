@@ -24,49 +24,47 @@ jobs:
         run: |
           npm install -g cordova
           
-          # 1. تأمين ملفاتك
-          mkdir -p my_source
-          if [ -d "Apk/www" ]; then
-            cp -r Apk/www/* my_source/
-          elif [ -d "www" ]; then
-            cp -r www/* my_source/
+          # 1. إنشاء المشروع مع الحفاظ على ملفاتك
+          mkdir -p my_app
+          cordova create my_app com.nospam.japan "SOS Japan Pro"
+          
+          # 2. نسخ ملفاتك الأساسية (config.xml و www)
+          if [ -f "config.xml" ]; then
+            cp config.xml my_app/config.xml
           fi
           
-          # 2. إنشاء مشروع كوردوفا جديد
-          rm -rf platforms plugins www config.xml package.json
-          cordova create myapp com.nospam.japan "SOS Japan Pro"
-          cp -r myapp/. .
-          rm -rf myapp
+          rm -rf my_app/www/*
+          cp -r www/* my_app/www/
           
-          # 3. إضافة الإضافات (تم اختيار إضافات مستقرة جداً)
+          cd my_app
+          
+          # 3. إضافة الإضافات الرسمية والمستقرة
           cordova plugin add cordova-plugin-dialogs
           cordova plugin add cordova-plugin-android-permissions
-          # إضافة مخصصة لاستقبال أحداث الهاتف (هذا الرابط يعمل عادة في بيئات CI)
-          cordova plugin add https://github.com/mokesmokes/cordova-plugin-calltrap.git
           
-          # 4. استعادة ملفات الـ HTML والـ JS
-          rm -rf www/*
-          cp -r my_source/* www/
-          
-          # 5. إصلاح الصلاحيات في config.xml
-          # إضافة الصلاحيات اللازمة للوصول لرقم المتصل وحالة الهاتف
-          sed -i '/<\/widget>/i \    <access origin="*" />\n    <allow-intent href="tel:*" />\n    <allow-navigation href="*" />\n    <platform name="android">\n        <config-file target="AndroidManifest.xml" parent="/*">\n            <uses-permission android:name="android.permission.READ_PHONE_STATE" />\n            <uses-permission android:name="android.permission.READ_CALL_LOG" />\n            <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />\n        </config-file>\n    </platform>' config.xml
-          
-          # 6. البناء والتوقيع
+          # 4. بناء المنصة
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
+          # 5. إنشاء مفتاح التوقيع (JKS)
           keytool -genkey -v -keystore release.jks -alias zakaria_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
           
+          # 6. إنشاء ملف إعدادات البناء
           cat <<EOF > build.json
           { "android": { "release": { "keystore": "release.jks", "storePassword": "123456", "alias": "zakaria_key", "password": "123456" } } }
           EOF
 
+          # 7. بناء APK
           cordova build android --release --device --buildConfig=build.json -- --packageType=apk
+          
+          # 8. بناء AAB (الطلب الإضافي)
           cordova build android --release --device --buildConfig=build.json -- --packageType=bundle
           
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ./SOS_Japan_Final_Pro.apk \;
-          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ./SOS_Japan_Final_Pro.aab \;
+          # 9. استخراج الملفات للمجلد الرئيسي
+          cd ..
+          find my_app/platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ./SOS_Japan_Final_Pro.apk \;
+          find my_app/platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ./SOS_Japan_Final_Pro.aab \;
+          cp my_app/release.jks ./release.jks
 
       - name: Upload Final Artifacts
         uses: actions/upload-artifact@v4
