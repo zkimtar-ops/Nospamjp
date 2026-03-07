@@ -1,4 +1,4 @@
-name: Safety_Call_Japan_Build
+name: Final_Build_System
 
 on:
   push:
@@ -28,6 +28,7 @@ jobs:
           cordova plugin add cordova-plugin-device
           cordova plugin add cordova-plugin-androidx-adapter
           cordova plugin add cordova-open-native-settings
+          cordova plugin add com-darryncampbell-cordova-plugin-intent
           
           cordova prepare android
           
@@ -42,5 +43,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Android-APK
+          name: Final-App-Build
           path: output/
