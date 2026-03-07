@@ -24,7 +24,7 @@ jobs:
         run: |
           npm install -g cordova
           
-          # 1. تأمين ملفاتك من المستودع
+          # 1. تأمين ملفاتك
           mkdir -p my_source
           if [ -d "Apk/www" ]; then
             cp -r Apk/www/* my_source/
@@ -32,26 +32,25 @@ jobs:
             cp -r www/* my_source/
           fi
           
-          # 2. إنشاء مشروع كوردوفا جديد بالاسم الجديد
+          # 2. إنشاء المشروع بالـ Package Name المعتمد
           rm -rf platforms plugins www config.xml package.json
           cordova create myapp com.nospam.japan "SOS Japan Pro"
           cp -r myapp/. .
           rm -rf myapp
           
-          # 3. إضافة المحركات اللازمة
-          cordova plugin add cordova-plugin-geolocation
+          # 3. إضافة الإضافات (الصلاحيات وفحص المكالمات)
           cordova plugin add cordova-plugin-dialogs
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-call-trap
           
-          # 4. استعادة ملفات الـ HTML والـ JS
+          # 4. استعادة ملفات HTML و JS
           rm -rf www/*
           cp -r my_source/* www/
           
-          # 5. إصلاح الصلاحيات في config.xml
-          sed -i '/<\/widget>/i \    <access origin="*" />\n    <allow-intent href="tel:*" />\n    <allow-intent href="sms:*" />\n    <allow-intent href="line:*" />\n    <allow-navigation href="*" />\n    <platform name="android">\n        <config-file target="AndroidManifest.xml" parent="/*">\n            <uses-permission android:name="android.permission.READ_PHONE_STATE" />\n            <uses-permission android:name="android.permission.READ_CALL_LOG" />\n        </config-file>\n    </platform>' config.xml
+          # 5. ضبط الصلاحيات في config.xml (الهاتف والإنترنت)
+          sed -i '/<\/widget>/i \    <access origin="*" />\n    <allow-intent href="tel:*" />\n    <allow-navigation href="*" />\n    <platform name="android">\n        <config-file target="AndroidManifest.xml" parent="/*">\n            <uses-permission android:name="android.permission.READ_PHONE_STATE" />\n            <uses-permission android:name="android.permission.READ_CALL_LOG" />\n        </config-file>\n    </platform>' config.xml
           
-          # 6. البناء والتوقيع (نفس الخطوات الأخيرة لاستخراج الملفات)
+          # 6. البناء النهائي واستخراج الملفات (APK, AAB, JKS)
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
@@ -64,7 +63,6 @@ jobs:
           cordova build android --release --device --buildConfig=build.json -- --packageType=apk
           cordova build android --release --device --buildConfig=build.json -- --packageType=bundle
           
-          # استخراج الملفات النهائية كما هي في كودك الأصلي
           find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ./SOS_Japan_Final_Pro.apk \;
           find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ./SOS_Japan_Final_Pro.aab \;
 
