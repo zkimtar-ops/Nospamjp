@@ -1,4 +1,4 @@
-Name: SOS Japan Final Success
+name: SOS Japan Final Success
 on:
   push:
     branches: [ main ]
@@ -47,10 +47,10 @@ jobs:
           rm -rf www/*
           cp -r my_source/* www/
           
-          # 5. ضبط الصلاحيات في config.xml (الهاتف والإنترنت)
+          # 5. ضبط الصلاحيات في config.xml
           sed -i '/<\/widget>/i \    <access origin="*" />\n    <allow-intent href="tel:*" />\n    <allow-navigation href="*" />\n    <platform name="android">\n        <config-file target="AndroidManifest.xml" parent="/*">\n            <uses-permission android:name="android.permission.READ_PHONE_STATE" />\n            <uses-permission android:name="android.permission.READ_CALL_LOG" />\n        </config-file>\n    </platform>' config.xml
           
-          # 6. البناء النهائي واستخراج الملفات (APK, AAB, JKS)
+          # 6. البناء النهائي واستخراج الملفات
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
@@ -63,6 +63,7 @@ jobs:
           cordova build android --release --device --buildConfig=build.json -- --packageType=apk
           cordova build android --release --device --buildConfig=build.json -- --packageType=bundle
           
+          # استخراج الملفات النهائية (نفس خطواتك الأصلية)
           find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ./SOS_Japan_Final_Pro.apk \;
           find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ./SOS_Japan_Final_Pro.aab \;
 
