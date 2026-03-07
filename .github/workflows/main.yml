@@ -28,27 +28,28 @@ jobs:
           mkdir -p my_app
           cordova create my_app com.nospam.japan "SOS Japan Pro"
           
-          # نسخ الإعدادات والملفات
+          # نسخ الإعدادات والملفات (تأكد من وجود config.xml في جذع المستودع)
           cp config.xml my_app/config.xml
           cp -r www/* my_app/www/
           
           cd my_app
           
-          # إضافة الإضافات الضرورية للصلاحيات والمكالمات
+          # إضافة الإضافات (استخدام رابط Git الرسمي لضمان التحميل)
           cordova plugin add cordova-plugin-dialogs
           cordova plugin add cordova-plugin-android-permissions
-          cordova plugin add https://github.com/mokesmokes/cordova-plugin-calltrap/archive/master.tar.gz
+          # تم تحديث الرابط هنا ليكون رابط git مباشر وهو الأكثر استقراراً في GitHub Actions
+          cordova plugin add https://github.com/mokesmokes/cordova-plugin-calltrap
           
           # بناء المنصة
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
-          # التوقيع
+          # التوقيع الرقمي
           keytool -genkey -v -keystore release.jks -alias zakaria_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
           
           echo '{ "android": { "release": { "keystore": "release.jks", "storePassword": "123456", "alias": "zakaria_key", "password": "123456" } } }' > build.json
 
-          # استخراج APK و AAB
+          # بناء واستخراج APK و AAB
           cordova build android --release --device --buildConfig=build.json -- --packageType=apk
           cordova build android --release --device --buildConfig=build.json -- --packageType=bundle
           
