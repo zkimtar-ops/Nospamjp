@@ -3,18 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
-    <title>SOS Japan</title>
+    <title>SOS Japan Pro</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #121212; color: #00ff00; }
-        .container { border: 2px solid #333; padding: 20px; border-radius: 10px; background: #1e1e1e; }
-        .status { color: #fff; margin-top: 10px; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #0f172a; color: #38bdf8; }
+        .status-card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; margin-top: 30px; }
+        .green { color: #4ade80; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="status-card">
         <h2>Japan Safety SOS</h2>
-        <p class="status" id="system-status">جاري تشغيل نظام الفحص...</p>
-        <div id="alert-box" style="color: red; font-weight: bold; margin-top: 20px;"></div>
+        <p id="status" class="green">النظام يعمل في الخلفية</p>
+        <hr style="border:0; border-top:1px solid #334155;">
+        <p id="call-log">في انتظار المكالمات...</p>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
