@@ -1,60 +1,99 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// بيانات مشروعك Nospam-9a4af
+// إعدادات Firebase الخاصة بمشروعك Nospam-9a4af
 const firebaseConfig = {
-  apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
-  authDomain: "nospam-9a4af.firebaseapp.com",
-  databaseURL: "https://nospam-9a4af-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "nospam-9a4af",
-  storageBucket: "nospam-9a4af.firebasestorage.app",
-  messagingSenderId: "1000207356900",
-  appId: "1:1000207356900:web:d1797e103304ce82aa2df1",
-  measurementId: "G-TXMW4XPQPN"
+    apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
+    authDomain: "nospam-9a4af.firebaseapp.com",
+    databaseURL: "https://nospam-9a4af-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "nospam-9a4af",
+    storageBucket: "nospam-9a4af.firebasestorage.app",
+    messagingSenderId: "1000207356900",
+    appId: "1:1000207356900:web:d1797e103304ce82aa2df1",
+    measurementId: "G-TXMW4XPQPN"
 };
 
 // تهيئة Firebase
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const database = firebase.database();
 
 function onDeviceReady() {
-    const permissions = cordova.plugins.permissions;
-    const list = [permissions.READ_PHONE_STATE, permissions.READ_CALL_LOG];
-
-    permissions.requestPermissions(list, (status) => {
-        if(status.hasPermission) {
-            setupListener();
-        } else {
-            document.getElementById('status').innerText = "خطأ: لم يتم تفعيل الصلاحيات";
-            document.getElementById('status').className = "";
-        }
-    }, () => console.error("Permission error"));
-}
-
-function setupListener() {
-    window.CallTrap.onCall(function(state) {
-        // state.state تعيد RINGING عند ورود اتصال
-        if (state.state === 'RINGING') {
-            checkNumber(state.number);
-        }
-    });
-}
-
-function checkNumber(phoneNumber) {
-    if (!phoneNumber) return;
+    console.log('تم تشغيل التطبيق وجاري تحضير نظام الحماية...');
     
-    document.getElementById('call-log').innerText = "فحص: " + phoneNumber;
+    // طلب صلاحيات الهاتف من المستخدم (ضروري لأندرويد 10 فما فوق)
+    const permissions = cordova.plugins.permissions;
+    const permissionsList = [
+        permissions.READ_PHONE_STATE,
+        permissions.READ_CALL_LOG
+    ];
 
-    // فحص الرقم في قاعدة البيانات (فرع spam_numbers)
-    db.ref('spam_numbers').child(phoneNumber).once('value', (snapshot) => {
-        if (snapshot.exists()) {
-            // تنبيه بوجود رقم مزعج
-            navigator.notification.alert(
-                "تحذير! الرقم (" + phoneNumber + ") مصنف كمزعج.",
-                null,
-                "Japan SOS",
-                "موافق"
-            );
-            document.getElementById('call-log').innerHTML = "<b style='color:red'>رقم مزعج: " + phoneNumber + "</b>";
+    permissions.requestPermissions(permissionsList, (status) => {
+        if (status.hasPermission) {
+            console.log("تم الحصول على الصلاحيات بنجاح");
+            startCallListener();
+        } else {
+            alert("يرجى تفعيل صلاحيات الهاتف لكي يتمكن التطبيق من اكتشاف الأرقام المزعجة.");
         }
+    }, (error) => {
+        console.error("خطأ في طلب الصلاحيات: ", error);
     });
+}
+
+function startCallListener() {
+    // الاستماع للمكالمات الواردة
+    // يدعم window.CallTrap أو window.calltrap حسب إصدار الـ Plugin
+    const trap = window.CallTrap || window.calltrap;
+
+    if (trap) {
+        trap.onCall(function(state) {
+            // الحالات: RINGING (يرن), OFFHOOK (مرفوع السمعة), IDLE (انتظار)
+            if (state.state === 'RINGING') {
+                const incomingNumber = state.number;
+                console.log("مكالمة واردة من: " + incomingNumber);
+                checkSpamList(incomingNumber);
+            }
+        });
+    } else {
+        console.error("فشل في تحميل إضافة فحص المكالمات (CallTrap)");
+    }
+}
+
+function checkSpamList(phoneNumber) {
+    if (!phoneNumber) return;
+
+    // تحديث الواجهة لعرض الرقم الذي يتم فحصه
+    const logElement = document.getElementById('call-log');
+    if (logElement) logElement.innerText = "يتم الآن فحص الرقم: " + phoneNumber;
+
+    // البحث في عقدة spam_numbers داخل Firebase
+    database.ref('spam_numbers').child(phoneNumber).once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            // الرقم موجود في القائمة السوداء
+            showSpamWarning(phoneNumber);
+        } else {
+            console.log("الرقم آمن");
+        }
+    }).catch((error) => {
+        console.error("خطأ في الاتصال بقاعدة البيانات: ", error);
+    });
+}
+
+function showSpamWarning(number) {
+    // إرسال تنبيه صوتي (Beep)
+    if (navigator.notification && navigator.notification.beep) {
+        navigator.notification.beep(1);
+    }
+
+    // إظهار رسالة تحذيرية للمستخدم
+    navigator.notification.alert(
+        "هذا الرقم (" + number + ") مصنف كـ رقم مزعج في اليابان. يرجى الحذر قبل الرد.",
+        null,
+        "⚠️ تنبيه حماية (Japan SOS)",
+        "فهمت"
+    );
+
+    // تحديث الواجهة
+    const logElement = document.getElementById('call-log');
+    if (logElement) {
+        logElement.innerHTML = "<b style='color:#ff4444'>تحذير: رقم مزعج! </b><br>" + number;
+    }
 }
