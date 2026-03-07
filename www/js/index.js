@@ -15,16 +15,50 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 function onDeviceReady() {
-    console.log("تطبيق SOS Japan يعمل بنجاح");
-    
-    // طلب الصلاحيات
+    // مصفوفة الصلاحيات المطلوبة للعمل التلقائي
     const permissions = cordova.plugins.permissions;
-    permissions.requestPermissions([
+    const permissionsList = [
         permissions.READ_PHONE_STATE,
-        permissions.READ_CALL_LOG
-    ], (status) => {
-        if(status.hasPermission) {
-            console.log("الصلاحيات مفعلة");
+        permissions.READ_CALL_LOG,
+        permissions.SYSTEM_ALERT_WINDOW
+    ];
+
+    // طلب الصلاحيات تلقائياً عند بدء التشغيل
+    permissions.requestPermissions(permissionsList, (status) => {
+        if (status.hasPermission) {
+            console.log("تم تفعيل كافة الصلاحيات تلقائياً");
+            startCallMonitor();
+        } else {
+            alert("يرجى الموافقة على الصلاحيات لضمان عمل نظام الحماية.");
+        }
+    }, (err) => console.error("Permission error:", err));
+}
+
+function startCallMonitor() {
+    // إضافة CallTrap لمراقبة المكالمات الواردة
+    if (window.CallTrap) {
+        window.CallTrap.onCall(function(state) {
+            let callState = (typeof state === 'string') ? state : state.state;
+            let incomingNumber = state.number || "";
+
+            if (callState === 'RINGING' && incomingNumber !== "") {
+                checkFirebase(incomingNumber);
+            }
+        });
+    }
+}
+
+function checkFirebase(number) {
+    db.ref('spam_numbers').child(number).once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            // إظهار تنبيه فوراً فوق شاشة الاتصال
+            navigator.notification.alert(
+                "تحذير: الرقم " + number + " مسجل كـ SPAM!",
+                null,
+                "⚠️ حماية SOS Japan",
+                "موافق"
+            );
+            navigator.notification.beep(1);
         }
     });
 }
