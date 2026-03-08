@@ -1,6 +1,6 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// إعدادات Firebase الخاصة بمشروعك Nospam-9a4af
+// إعدادات Firebase الخاصة بمشروعك (Nospam-9a4af)
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -12,27 +12,36 @@ const firebaseConfig = {
     measurementId: "G-TXMW4XPQPN"
 };
 
+// تهيئة Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 function onDeviceReady() {
-    console.log("نظام SOS Japan جاهز للعمل على واجهة شاومي");
-
+    console.log('جاري إعداد نظام الحماية وطلب تصاريح التنبيهات...');
+    
     const permissions = cordova.plugins.permissions;
-    const list = [
+    
+    // إضافة POST_NOTIFICATIONS لطلب الوصول إلى التنبيهات برمجياً
+    const permissionsList = [
         permissions.READ_PHONE_STATE,
         permissions.READ_CALL_LOG,
-        permissions.READ_PHONE_NUMBERS
+        permissions.READ_PHONE_NUMBERS,
+        permissions.POST_NOTIFICATIONS // ضروري جداً لأندرويد 13+ لظهور التنبيهات
     ];
 
-    permissions.requestPermissions(list, (status) => {
+    permissions.requestPermissions(permissionsList, (status) => {
         if (status.hasPermission) {
-            startCallTrap();
+            console.log("تم تفعيل كافة الصلاحيات بما فيها التنبيهات");
+            startCallMonitor();
+        } else {
+            alert("بدون إذن التنبيهات، لن يظهر التحذير عند اتصال رقم مزعج.");
         }
-    }, (err) => console.error(err));
+    }, (error) => {
+        console.error("خطأ في طلب الصلاحيات: ", error);
+    });
 }
 
-function startCallTrap() {
+function startCallMonitor() {
     if (window.CallTrap) {
         window.CallTrap.onCall(function(state) {
             let callState = (typeof state === 'string') ? state : state.state;
@@ -45,30 +54,30 @@ function startCallTrap() {
     }
 }
 
-function checkSpamList(phoneNumber) {
-    // فحص الرقم في قاعدة بيانات Firebase
-    database.ref('spam_numbers').child(phoneNumber).once('value', (snapshot) => {
+function checkSpamList(number) {
+    database.ref('spam_numbers').child(number).once('value', (snapshot) => {
         if (snapshot.exists()) {
-            sendDualWarning(phoneNumber);
+            triggerSpamWarning(number);
         }
     });
 }
 
-function sendDualWarning(number) {
-    // 1. تنبيه عبر نافذة منبثقة (يعتمد على إعداد Display pop-up windows في صورتك)
+function triggerSpamWarning(number) {
+    // 1. الاهتزاز (الذي أضفناه في الـ YAML)
+    if (navigator.vibrate) {
+        navigator.vibrate([500, 200, 500]); 
+    }
+
+    // 2. إظهار التنبيه المرئي (Alert)
+    // ملاحظة لشاومي: سيعمل فقط إذا فعلت Display pop-up windows يدوياً
     navigator.notification.alert(
-        "⚠️ رقم مزعج: " + number,
+        "⚠️ تحذير: الرقم " + number + " مدرج كـ Spam في اليابان!",
         null,
-        "تنبيه SOS Japan",
+        "SOS Japan Pro",
         "موافق"
     );
 
-    // 2. تنبيه عبر الاهتزاز (Vibration)
-    if (navigator.vibrate) {
-        navigator.vibrate([500, 200, 500]); // اهتزاز متقطع للتنبيه القوي
-    }
-
-    // 3. صوت تنبيه (Beep)
+    // 3. صوت التنبيه
     if (navigator.notification.beep) {
         navigator.notification.beep(1);
     }
