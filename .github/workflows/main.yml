@@ -34,6 +34,7 @@ jobs:
           cordova plugin add cordova-plugin-vibration
           cordova plugin add cordova-plugin-local-notification
           cordova plugin add cordova-plugin-whitelist
+          cordova plugin add cordova-plugin-call-trap
           
           # 3. بناء المنصة أندرويد 13 لضمان التوافق مع 16
           yes | sdkmanager --licenses || true
