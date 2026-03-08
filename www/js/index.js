@@ -1,5 +1,6 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
+// إعدادات Firebase الخاصة بك
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -11,10 +12,16 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
-    console.log("Cordova is ready");
-    const statusLabel = document.getElementById('status-indicator');
-    if(statusLabel) statusLabel.innerText = "جاري طلب الأذونات...";
+    const statusLabel = document.getElementById('status-text');
+    if (statusLabel) statusLabel.innerText = "جاري تهيئة النظام...";
 
+    // 1. تهيئة Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    window.database = firebase.database();
+
+    // 2. طلب الأذونات
     const permissions = cordova.plugins.permissions;
     const list = [
         permissions.READ_PHONE_STATE,
@@ -24,87 +31,51 @@ function onDeviceReady() {
 
     permissions.requestPermissions(list, (status) => {
         if (status.hasPermission) {
-            if(statusLabel) {
+            if (statusLabel) {
                 statusLabel.innerText = "✅ النظام نشط ومراقب";
                 statusLabel.style.color = "green";
             }
-            initializeFirebase();
-            startCallMonitor(); // هذا هو الجزء الذي كان ناقصاً
+            startCallMonitor();
+            loadNumbersList();
         } else {
-            if(statusLabel) statusLabel.innerText = "❌ الأذونات مرفوضة";
+            if (statusLabel) statusLabel.innerText = "❌ الأذونات مرفوضة";
         }
     }, (err) => console.error(err));
 }
 
-function initializeFirebase() {
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-    window.database = firebase.database();
-}
-
-// --- الجزء الناقص: مراقبة المكالمات ---
+// مراقبة المكالمات الواردة
 function startCallMonitor() {
-    if (window.CallTrap) {
-        window.CallTrap.onCall(function(state) {
-            // state تعيد حالة الهاتف (RINGING, OFFHOOK, IDLE) والرقم
-            if (state.state === 'RINGING') {
-                let incomingNumber = state.number;
-                checkNumberInFirebase(incomingNumber);
+    if (window.PhoneCallTrap) {
+        window.PhoneCallTrap.onCall(function(state) {
+            if (state === 'RINGING') {
+                // ملاحظة: قد يحتاج جلب الرقم لإضافة أخرى، لكننا سنعتمد على حالة الرنين
+                checkIncomingNumber("000"); // تجريبي
             }
         });
     }
 }
 
-function checkNumberInFirebase(number) {
-    if (!window.database) return;
-    
-    window.database.ref('spam_numbers/' + number).once('value', (snapshot) => {
-        if (snapshot.exists()) {
-            triggerWarning(number);
-        }
-    });
-}
-
-function triggerWarning(number) {
-    // 1. اهتزاز الهاتف
-    navigator.vibrate(2000); 
-
-    // 2. إشعار محلي يظهر فوق المكالمة
-    cordova.plugins.notification.local.schedule({
-        title: '⚠️ تحذير: رقم مزعج!',
-        text: 'الرقم ' + number + ' مسجل كـ Spam في اليابان',
-        foreground: true,
-        priority: 2
-    });
-
-    // 3. تنبيه صوتي بسيط
-    alert("⚠️ تحذير أمني: رقم مزعج يتصل بك الآن!");
-}
-
-// --- كود الزر لعرض القائمة ---
-document.getElementById('toggleSpamBtn').addEventListener('click', function() {
-    const listDiv = document.getElementById('spamList');
-    const container = document.getElementById('listContainer');
-    
-    if (listDiv.style.display === 'none' || listDiv.style.display === '') {
-        listDiv.style.display = 'block';
-        if (!window.database) {
-            container.innerHTML = "يرجى منح الأذونات أولاً";
-            return;
-        }
-        container.innerHTML = "جاري جلب البيانات...";
-        window.database.ref('spam_numbers').once('value', (snapshot) => {
-            container.innerHTML = '';
+function loadNumbersList() {
+    const container = document.getElementById('list-content');
+    window.database.ref('spam_numbers').on('value', (snapshot) => {
+        if (container) {
+            container.innerHTML = "";
             if (snapshot.exists()) {
                 snapshot.forEach((child) => {
-                    container.innerHTML += `<div class="spam-item">📞 ${child.key}</div>`;
+                    container.innerHTML += `<div class="spam-item"><span>📞 ${child.key}</span> <span class="badge">Spam</span></div>`;
                 });
             } else {
-                container.innerHTML = "القائمة فارغة";
+                container.innerHTML = "القائمة فارغة حالياً";
             }
-        }).catch(e => container.innerHTML = "خطأ: " + e.message);
-    } else {
-        listDiv.style.display = 'none';
-    }
-});
+        }
+    });
+}
+
+function checkIncomingNumber(number) {
+    window.database.ref('spam_numbers/' + number).once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            navigator.vibrate(2000);
+            alert("⚠️ تحذير: رقم مزعج يتصل بك!");
+        }
+    });
+}
