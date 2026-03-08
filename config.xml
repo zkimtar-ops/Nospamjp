@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+<widget id="com.nospam.japan" version="1.1.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>SOS Japan Pro</name>
     <description>نظام حماية اليابان التلقائي</description>
     <author email="dev@zakaria.com">Zakaria</author>
@@ -7,16 +7,17 @@
     <content src="index.html" />
     
     <access origin="*" />
+    <allow-navigation href="*" />
     <allow-intent href="tel:*" />
     <allow-intent href="sms:*" />
     <allow-intent href="line:*" />
-    <allow-navigation href="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
 
     <platform name="android">
         <preference name="AndroidXEnabled" value="true" />
         <preference name="android-minSdkVersion" value="26" />
+        <preference name="android-targetSdkVersion" value="34" />
         <preference name="KeepRunning" value="true" />
         
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
@@ -32,6 +33,7 @@
             <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
             <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
             <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+            <uses-permission android:name="android.permission.VIBRATE" />
         </config-file>
     </platform>
 </widget>
