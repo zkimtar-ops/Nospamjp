@@ -2,54 +2,30 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
-    
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline' https://*.firebasedatabase.app wss://*.firebasedatabase.app; style-src * 'unsafe-inline';">
     <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
     <title>SOS Japan Pro</title>
-    
     <style>
-        :root { --primary: #e74c3c; --dark: #2c3e50; --bg: #f4f7f6; }
-        body { font-family: sans-serif; background-color: var(--bg); margin: 0; padding: 20px; text-align: center; }
-        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        h1 { color: var(--primary); font-size: 22px; margin-bottom: 5px; }
-        #status-box { background: #eee; padding: 10px; border-radius: 8px; margin: 15px 0; font-size: 13px; color: #555; }
-        .btn { display: block; width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        .btn-load { background: var(--dark); color: white; }
-        #log-area { text-align: left; font-family: monospace; font-size: 11px; background: #222; color: #0f0; padding: 10px; border-radius: 5px; margin-top: 20px; max-height: 150px; overflow-y: auto; display: none; }
-        .spam-list { margin-top: 20px; text-align: right; }
-        .spam-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; text-align: center; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #e74c3c; margin-bottom: 5px; }
+        #status-text { font-weight: bold; color: #7f8c8d; }
+        .spam-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+        .badge { background: #fee; color: #c00; padding: 2px 5px; border-radius: 4px; font-size: 12px; }
+        #list-content { margin-top: 20px; text-align: right; max-height: 300px; overflow-y: auto; }
     </style>
 </head>
 <body>
-
     <div class="card">
         <h1>🇯🇵 SOS Japan Pro</h1>
-        <p style="font-size: 12px; color: #7f8c8d;">نظام حماية إيدوغاوا - طوكيو</p>
-
-        <div id="status-box">الحالة: <span id="status-text">بانتظار Cordova...</span></div>
-
-        <button class="btn btn-load" id="btn-show-list">عرض الأرقام المزعجة</button>
-        
-        <div id="spam-display" class="spam-list" style="display:none;">
-            <div id="numbers-container">جاري جلب البيانات...</div>
-        </div>
-
-        <div id="log-area"></div>
+        <p id="status-text">بانتظار النظام...</p>
+        <hr>
+        <div id="list-content">جاري جلب الأرقام المزعجة...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    
     <script src="cordova.js"></script>
     <script src="js/index.js"></script>
-
-    <script>
-        // وظيفة لإظهار الأخطاء على شاشة الهاتف مباشرة
-        window.onerror = function(msg, url, line) {
-            var log = document.getElementById('log-area');
-            log.style.display = 'block';
-            log.innerHTML += "ERROR: " + msg + " (Line: " + line + ")<br>";
-        };
-    </script>
 </body>
 </html>
