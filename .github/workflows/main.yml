@@ -31,6 +31,7 @@ jobs:
           cordova plugin add cordova-plugin-dialogs
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-call-number
+          cordova plugin add cordova-plugin-vibration
           
           # 3. بناء المنصة
           yes | sdkmanager --licenses || true
