@@ -2,30 +2,32 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *; connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com;">
+    
     <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
     <title>SOS Japan Pro</title>
-    <link rel="stylesheet" href="css/index.css">
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; }
-        .btn { background: #d9534f; color: white; border: none; padding: 15px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; color: #333; }
+        .btn { background: #d9534f; color: white; border: none; padding: 15px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; width: 100%; max-width: 300px; }
+        #status-indicator { color: orange; font-weight: bold; margin-bottom: 10px; }
         #spamList { margin-top: 20px; text-align: left; background: white; border-radius: 8px; padding: 10px; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .spam-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
-        .spam-item:last-child { border-bottom: none; }
+        .spam-item { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
     </style>
 </head>
 <body>
     <h1>🇯🇵 SOS Japan Pro</h1>
-    <p>نظام الحماية من الأرقام المزعجة</p>
+    <div id="status-indicator">جاري تهيئة النظام...</div>
     
     <button class="btn" id="toggleSpamBtn">عرض قائمة الأرقام المزعجة</button>
 
     <div id="spamList">
-        <h3 style="text-align: center;">القائمة السوداء الحالية</h3>
-        <div id="listContainer">جاري التحميل...</div>
+        <h3 style="text-align: center;">القائمة السوداء</h3>
+        <div id="listContainer">جاري تحميل البيانات...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    
     <script src="cordova.js"></script>
     <script src="js/index.js"></script>
 </body>
