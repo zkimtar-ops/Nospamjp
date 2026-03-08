@@ -1,4 +1,4 @@
-name: SOS Japan Auto Build
+name: SOS Japan Final Pro
 on:
   push:
     branches: [ main ]
@@ -20,27 +20,28 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build and Sign
+      - name: Build and Sign Everything
         run: |
           npm install -g cordova
           
-          # 1. تهيئة المشروع مباشرة في المجلد الرئيسي
+          # 1. إنشاء المشروع
           cordova create . com.nospam.japan "SOS Japan Pro" || true
           
-          # 2. إضافة الإضافات الرسمية والمستقرة
+          # 2. إضافة الإضافات (بما فيها Vibration والـ Dialogs والتنبيهات)
           cordova plugin add cordova-plugin-dialogs
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-call-number
           cordova plugin add cordova-plugin-vibration
+          cordova plugin add cordova-plugin-local-notification
           
-          # 3. بناء المنصة
+          # 3. بناء المنصة أندرويد 13 لضمان التوافق مع 16
           yes | sdkmanager --licenses || true
           cordova platform add android@13.0.0
           
-          # 4. إنشاء مفتاح التوقيع الرقمي (Keystore)
+          # 4. إنشاء مفتاح التوقيع الرقمي
           keytool -genkey -v -keystore release.jks -alias zakaria_key -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Zakaria" -deststoretype pkcs12
           
-          # 5. إنشاء ملف build.json (تم التأكد من المسار)
+          # 5. إعداد ملف بناء التوقيع
           cat <<EOF > build.json
           {
             "android": {
@@ -48,27 +49,24 @@ jobs:
                 "keystore": "release.jks",
                 "storePassword": "123456",
                 "alias": "zakaria_key",
-                "password": "123456",
-                "keystoreType": ""
+                "password": "123456"
               }
             }
           }
           EOF
 
-          # 6. بناء واستخراج APK و AAB
+          # 6. بناء واستخراج الملفات
           cordova build android --release --device --buildConfig=build.json -- --packageType=apk
           cordova build android --release --device --buildConfig=build.json -- --packageType=bundle
           
-          # 7. تجهيز الملفات النهائية للتحميل
-          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ./SOS_Japan_Final.apk \;
-          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ./SOS_Japan_Final.aab \;
+          find platforms/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} ./SOS_Japan_Final_Pro.apk \;
+          find platforms/android/app/build/outputs/bundle/release/ -name "*.aab" -exec cp {} ./SOS_Japan_Final_Pro.aab \;
 
       - name: Upload Final Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SOS-Japan-Final-Bundle
+          name: SOS-Japan-Final-Pro
           path: |
             *.apk
             *.aab
             release.jks
-            build.json
