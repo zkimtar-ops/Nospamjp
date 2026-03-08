@@ -74,8 +74,23 @@ function loadNumbersList() {
 function checkIncomingNumber(number) {
     window.database.ref('spam_numbers/' + number).once('value', (snapshot) => {
         if (snapshot.exists()) {
+            // 1. الاهتزاز (يعمل حالياً)
             navigator.vibrate(2000);
-            alert("⚠️ تحذير: رقم مزعج يتصل بك!");
+
+            // 2. إرسال إشعار Push Notification (إضافة جديدة)
+            // هذا الإشعار سيظهر في أعلى الشاشة حتى لو كان التطبيق في الخلفية
+            if (window.cordova && cordova.plugins.notification.local) {
+                cordova.plugins.notification.local.schedule({
+                    title: '⚠️ تحذير من SOS Japan',
+                    text: 'رقم مزعج يتصل بك الآن: ' + number,
+                    foreground: true, 
+                    priority: 2, // لضمان الظهور في أعلى الشاشة (Heads-up)
+                    vibrate: true
+                });
+            }
+
+            // 3. التنبيه التقليدي
+            alert("⚠️ تحذير أمني: الرقم " + number + " مسجل كـ Spam!");
         }
     });
 }
