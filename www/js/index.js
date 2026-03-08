@@ -1,6 +1,6 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// إعدادات Firebase الخاصة بمشروعك (Nospam-9a4af)
+// إعدادات Firebase الخاصة بمشروعك Nospam-9a4af
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -12,114 +12,77 @@ const firebaseConfig = {
     measurementId: "G-TXMW4XPQPN"
 };
 
-// تهيئة Firebase
+// تهيئة الفايربيس
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 function onDeviceReady() {
-    console.log('التطبيق يعمل... جاري إعداد الحماية...');
+    console.log('جاري تشغيل نظام Japan Safety SOS...');
     
-    // 1. طلب الصلاحيات الأساسية أولاً
-    requestBasePermissions();
-}
-
-function requestBasePermissions() {
+    // طلب الصلاحيات الأساسية فور تشغيل التطبيق
     const permissions = cordova.plugins.permissions;
     const list = [
         permissions.READ_PHONE_STATE,
         permissions.READ_CALL_LOG,
-        permissions.READ_PHONE_NUMBERS
+        permissions.READ_PHONE_NUMBERS // ضرورية جداً لأندرويد 10 فما فوق
     ];
 
     permissions.requestPermissions(list, (status) => {
         if (status.hasPermission) {
-            // 2. بعد قبول الصلاحيات، نطلب جعله التطبيق الافتراضي
-            askToSetAsDefaultSpamApp();
+            console.log("تم تفعيل الصلاحيات. نظام المراقبة نشط.");
+            startCallListener();
         } else {
-            alert("الصلاحيات مرفوضة. لن يتمكن التطبيق من حمايتك.");
+            alert("بدون صلاحيات الهاتف، لن يتمكن التطبيق من حمايتك في اليابان.");
         }
-    }, (err) => console.error(err));
+    }, (error) => {
+        console.error("خطأ في طلب الصلاحيات: ", error);
+    });
 }
 
-function askToSetAsDefaultSpamApp() {
-    // محاولة فتح شاشة إعداد التطبيق الافتراضي لهوية المتصل
-    // ملاحظة: في أندرويد 10+ هذا هو الإجراء الصحيح لضمان قراءة الرقم فوراً
-    if (window.cordova && window.cordova.plugins && window.cordova.plugins.intentShim) {
-        window.cordova.plugins.intentShim.startActivity(
-            {
-                action: "android.telecom.action.CHANGE_DEFAULT_DIALER",
-                extras: {
-                    "android.telecom.extra.CHANGE_DEFAULT_DIALER_PACKAGE_NAME": "com.nospam.japan"
-                }
-            },
-            function() { console.log("تم فتح شاشة الإعدادات"); },
-            function() { 
-                // إذا فشل الطلب المباشر، نفتح شاشة الإعدادات العامة للمستخدم
-                console.log("فشل فتح الطلب المباشر، نفتح الإعدادات العامة");
-                openDefaultAppsSettings();
-            }
-        );
-    } else {
-        // إذا لم تتوفر الإضافة، نكتفي بالتنبيه والبدء في مراقبة المكالمات
-        startCallTrap();
-    }
-}
-
-function openDefaultAppsSettings() {
-    navigator.notification.confirm(
-        "لتعمل ميزة كشف الأرقام المزعجة في اليابان، يجب ضبط التطبيق كافتراضي لـ (Caller ID & Spam).",
-        function(index) {
-            if (index === 1) {
-                // محاولة فتح إعدادات التطبيقات الافتراضية
-                if (window.cordova.plugins.settings) {
-                    window.cordova.plugins.settings.open("manage_default_apps");
-                }
-            }
-            startCallTrap(); // نبدأ المراقبة بكل الأحوال
-        },
-        "إعداد هام",
-        ["افتح الإعدادات", "لاحقاً"]
-    );
-}
-
-function startCallTrap() {
+function startCallListener() {
+    // استخدام CallTrap للاستماع للمكالمات الحية
     if (window.CallTrap) {
         window.CallTrap.onCall(function(state) {
-            // الحالة RINGING تعني أن هناك اتصالاً وارداً الآن
+            // التحقق من حالة الرنين (RINGING)
             let callState = (typeof state === 'string') ? state : state.state;
             let incomingNumber = state.number || "";
 
             if (callState === 'RINGING') {
                 if (incomingNumber) {
-                    checkSpam(incomingNumber);
+                    checkSpamDatabase(incomingNumber);
                 } else {
-                    console.log("الرقم مخفي أو الصلاحيات غير مكتملة (اجعل التطبيق افتراضياً)");
+                    // في أندرويد 16، إذا كان الرقم فارغاً، فهذا يعني أنك بحاجة لمنح صلاحية
+                    // "الظهور فوق التطبيقات الأخرى" يدوياً من إعدادات الهاتف.
+                    console.log("الرقم لم يظهر. تأكد من تفعيل 'Display over other apps'");
                 }
             }
         });
     }
 }
 
-function checkSpam(number) {
-    database.ref('spam_numbers').child(number).once('value', (snapshot) => {
+function checkSpamDatabase(phoneNumber) {
+    // البحث في الفايربيس داخل عقدة spam_numbers
+    database.ref('spam_numbers').child(phoneNumber).once('value', (snapshot) => {
         if (snapshot.exists()) {
-            // الرقم موجود في القائمة السوداء
-            triggerAlert(number);
+            // الرقم موجود في القائمة السوداء لليابان
+            notifyUser(phoneNumber);
         }
+    }).catch((err) => {
+        console.error("خطأ في الاتصال بالفايربيس: ", err);
     });
 }
 
-function triggerAlert(number) {
-    // تنبيه بالاهتزاز والصوت
+function notifyUser(number) {
+    // إطلاق تنبيه صوتي واهتزاز
     if (navigator.notification) {
         navigator.notification.beep(1);
-        navigator.notification.vibrate(1000);
-        
+        navigator.notification.vibrate(1000); // اهتزاز لمده ثانية واحدة
+
         navigator.notification.alert(
-            "تحذير! الرقم " + number + " مصنف كمزعج في اليابان.",
+            "تحذير: الرقم " + number + " مدرج كـ رقم مزعج في اليابان.",
             null,
-            "⚠️ SOS Japan",
-            "إغلاق"
+            "⚠️ تنبيه أمني (SOS Japan)",
+            "موافق"
         );
     }
 }
