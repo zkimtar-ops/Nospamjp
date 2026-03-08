@@ -4,23 +4,28 @@
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
     <title>SOS Japan Pro</title>
+    <link rel="stylesheet" href="css/index.css">
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #0f172a; color: #38bdf8; }
-        .status-card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; margin-top: 30px; }
-        .green { color: #4ade80; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; }
+        .btn { background: #d9534f; color: white; border: none; padding: 15px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; }
+        #spamList { margin-top: 20px; text-align: left; background: white; border-radius: 8px; padding: 10px; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .spam-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .spam-item:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
-    <div class="status-card">
-        <h2>Japan Safety SOS</h2>
-        <p id="status" class="green">النظام يعمل في الخلفية</p>
-        <hr style="border:0; border-top:1px solid #334155;">
-        <p id="call-log">في انتظار المكالمات...</p>
+    <h1>🇯🇵 SOS Japan Pro</h1>
+    <p>نظام الحماية من الأرقام المزعجة</p>
+    
+    <button class="btn" id="toggleSpamBtn">عرض قائمة الأرقام المزعجة</button>
+
+    <div id="spamList">
+        <h3 style="text-align: center;">القائمة السوداء الحالية</h3>
+        <div id="listContainer">جاري التحميل...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
-    
     <script src="cordova.js"></script>
     <script src="js/index.js"></script>
 </body>
