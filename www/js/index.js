@@ -1,6 +1,5 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// إعدادات Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -12,10 +11,10 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
-    // تحديث الحالة في الواجهة
-    document.getElementById('status-indicator').innerText = "النظام يعمل - بانتظار الأذونات";
+    console.log("Cordova is ready");
+    const statusLabel = document.getElementById('status-indicator');
+    if(statusLabel) statusLabel.innerText = "جاري طلب الأذونات...";
 
-    // 1. طلب الأذونات فوراً
     const permissions = cordova.plugins.permissions;
     const list = [
         permissions.READ_PHONE_STATE,
@@ -25,39 +24,76 @@ function onDeviceReady() {
 
     permissions.requestPermissions(list, (status) => {
         if (status.hasPermission) {
-            document.getElementById('status-indicator').innerText = "✅ متصل ونشط";
-            document.getElementById('status-indicator').style.color = "green";
+            if(statusLabel) {
+                statusLabel.innerText = "✅ النظام نشط ومراقب";
+                statusLabel.style.color = "green";
+            }
             initializeFirebase();
+            startCallMonitor(); // هذا هو الجزء الذي كان ناقصاً
         } else {
-            document.getElementById('status-indicator').innerText = "❌ الأذونات مرفوضة";
-            document.getElementById('status-indicator').style.color = "red";
+            if(statusLabel) statusLabel.innerText = "❌ الأذونات مرفوضة";
         }
-    }, (err) => {
-        console.error(err);
-    });
+    }, (err) => console.error(err));
 }
 
 function initializeFirebase() {
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    // جعل المتغير متاحاً عالمياً
     window.database = firebase.database();
 }
 
-// كود الزر لعرض القائمة
+// --- الجزء الناقص: مراقبة المكالمات ---
+function startCallMonitor() {
+    if (window.CallTrap) {
+        window.CallTrap.onCall(function(state) {
+            // state تعيد حالة الهاتف (RINGING, OFFHOOK, IDLE) والرقم
+            if (state.state === 'RINGING') {
+                let incomingNumber = state.number;
+                checkNumberInFirebase(incomingNumber);
+            }
+        });
+    }
+}
+
+function checkNumberInFirebase(number) {
+    if (!window.database) return;
+    
+    window.database.ref('spam_numbers/' + number).once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            triggerWarning(number);
+        }
+    });
+}
+
+function triggerWarning(number) {
+    // 1. اهتزاز الهاتف
+    navigator.vibrate(2000); 
+
+    // 2. إشعار محلي يظهر فوق المكالمة
+    cordova.plugins.notification.local.schedule({
+        title: '⚠️ تحذير: رقم مزعج!',
+        text: 'الرقم ' + number + ' مسجل كـ Spam في اليابان',
+        foreground: true,
+        priority: 2
+    });
+
+    // 3. تنبيه صوتي بسيط
+    alert("⚠️ تحذير أمني: رقم مزعج يتصل بك الآن!");
+}
+
+// --- كود الزر لعرض القائمة ---
 document.getElementById('toggleSpamBtn').addEventListener('click', function() {
     const listDiv = document.getElementById('spamList');
     const container = document.getElementById('listContainer');
     
     if (listDiv.style.display === 'none' || listDiv.style.display === '') {
         listDiv.style.display = 'block';
-        
         if (!window.database) {
             container.innerHTML = "يرجى منح الأذونات أولاً";
             return;
         }
-
+        container.innerHTML = "جاري جلب البيانات...";
         window.database.ref('spam_numbers').once('value', (snapshot) => {
             container.innerHTML = '';
             if (snapshot.exists()) {
