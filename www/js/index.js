@@ -1,6 +1,5 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// 1. إعدادات Firebase الخاصة بك
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -12,117 +11,96 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
-    console.log("النظام جاهز...");
-
-    // 2. تهيئة Firebase فوراً لضمان الاتصال
-    try {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        window.database = firebase.database();
-        
-        // فحص حالة الاتصال وتحديث الواجهة
-        const connectedRef = firebase.database().ref(".info/connected");
-        connectedRef.on("value", (snap) => {
-            const statusLabel = document.getElementById('status-text');
-            if (snap.val() === true) {
-                if (statusLabel) statusLabel.innerText = "✅ متصل بقاعدة البيانات";
-            } else {
-                if (statusLabel) statusLabel.innerText = "❌ جاري محاولة الاتصال...";
-            }
-        });
-    } catch (e) {
-        console.error("Firebase Error: " + e.message);
+    // 1. التأكد من تهيئة الفيرباس والاتصال بالـ Realtime Database
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
     }
+    const db = firebase.database();
 
-    // 3. طلب الأذونات الشاملة (الموجودة في الـ YAML)
+    // فحص الاتصال لإظهاره لك على الشاشة (للتأكد من أنه متصل بحسابك)
+    db.ref(".info/connected").on("value", (snap) => {
+        const statusLabel = document.getElementById('status-text');
+        if (snap.val() === true) {
+            statusLabel.innerText = "✅ متصل الآن بـ nospam-9a4af";
+            statusLabel.style.color = "green";
+            loadSpamNumbers(db); // جلب الأرقام فور الاتصال
+        } else {
+            statusLabel.innerText = "❌ جاري محاولة الربط بالفيرباس...";
+            statusLabel.style.color = "red";
+        }
+    });
+
+    // 2. طلب الأذونات (بما فيها إذن التنبيهات لأندرويد 13+)
     const permissions = cordova.plugins.permissions;
-    const list = [
-        permissions.READ_PHONE_STATE,   // لمراقبة حالة الهاتف
-        permissions.READ_CALL_LOG,     // لقراءة رقم المتصل
-        permissions.ANSWER_PHONE_CALLS, // لإنهاء المكالمات المزعجة
-        "android.permission.POST_NOTIFICATIONS" // للتنبيهات
-    ];
-
-    permissions.requestPermissions(list, (status) => {
-        if (status.hasPermission) {
-            startCallProtection();
-            loadSpamList();
-            
-            // فتح نافذة "Set as default" يدوياً لمرة واحدة
-            setTimeout(showSetupAlert, 2000);
-        }
-    }, (err) => console.error("Permission error", err));
+    permissions.requestPermissions([
+        permissions.READ_PHONE_STATE,
+        permissions.ANSWER_PHONE_CALLS,
+        permissions.READ_CALL_LOG,
+        "android.permission.POST_NOTIFICATIONS"
+    ], (status) => {
+        if (status.hasPermission) startMonitoring(db);
+    });
 }
 
-// 4. وظيفة التوجيه للإعدادات (بديلة لـ Role Manager لتجنب أخطاء البناء)
-function showSetupAlert() {
-    if (window.cordova && cordova.plugins.settings) {
-        navigator.notification.confirm(
-            "لجعل التطبيق يعمل مثل Truecaller ويحظر تلقائياً، يجب اختياره كـ 'تطبيق الهاتف الافتراضي' من الإعدادات.",
-            function(buttonIndex) {
-                if (buttonIndex === 1) {
-                    // فتح صفحة التطبيقات الافتراضية مباشرة
-                    cordova.plugins.settings.open("default_apps");
-                }
-            },
-            "خطوة هامة",
-            ["افتح الإعدادات", "لاحقاً"]
-        );
-    }
-}
-
-// 5. مراقبة المكالمات الواردة باستخدام PhoneCallTrap
-function startCallProtection() {
-    if (window.PhoneCallTrap) {
-        window.PhoneCallTrap.onCall(function(state) {
-            if (state === 'RINGING') {
-                // ملاحظة: هنا يجب تمرير الرقم القادم للفحص
-                // في بعض نسخ أندرويد الحديثة يتم جلب الرقم من سجل المكالمات
-                checkAndBlock("000"); 
-            }
-        });
-    }
-}
-
-// 6. الفحص والحظر (Reject Call)
-function checkAndBlock(incomingNumber) {
-    window.database.ref('spam_numbers/' + incomingNumber).once('value', (snapshot) => {
-        if (snapshot.exists()) {
-            // أ- قطع المكالمة فوراً
-            if (window.PhoneCallTrap && window.PhoneCallTrap.endCall) {
-                window.PhoneCallTrap.endCall();
-            }
-
-            // ب- اهتزاز الهاتف
-            navigator.vibrate(1000);
-
-            // ج- إرسال إشعار محلي
-            if (window.cordova && cordova.plugins.notification.local) {
-                cordova.plugins.notification.local.schedule({
-                    title: '🚫 حظر تلقائي',
-                    text: 'تم إنهاء مكالمة من رقم مزعج: ' + incomingNumber,
-                    foreground: true,
-                    priority: 2
+// 3. دالة جلب الأرقام وعرضها (تأكد أن الاسم في الفيرباس هو spam_numbers)
+function loadSpamNumbers(db) {
+    const listDiv = document.getElementById('list-content');
+    db.ref('spam_numbers').on('value', (snapshot) => {
+        if (listDiv) {
+            listDiv.innerHTML = "";
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    listDiv.innerHTML += `<div class="spam-item"><span>📞 ${child.key}</span> <span class="badge">محظور</span></div>`;
                 });
+            } else {
+                listDiv.innerHTML = "<p>لا توجد أرقام في قاعدة البيانات حالياً</p>";
             }
         }
     });
 }
 
-// 7. تحميل قائمة الأرقام لعرضها في التطبيق
-function loadSpamList() {
-    const listDiv = document.getElementById('list-content');
-    window.database.ref('spam_numbers').on('value', (snapshot) => {
-        if (listDiv) {
-            listDiv.innerHTML = "";
-            snapshot.forEach((child) => {
-                listDiv.innerHTML += `
-                    <div style="padding:10px; border-bottom:1px solid #ddd;">
-                        <strong>📞 ${child.key}</strong>
-                        <span style="color:red; float:left;">محظور</span>
-                    </div>`;
+// 4. حل مشكلة "الإعدادات لا تفتح" (استخدام الـ Intent المباشر)
+function showSetupAlert() {
+    if (window.plugins && window.plugins.intentShim) {
+        window.plugins.intentShim.startActivity({
+            action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
+        }, () => {}, () => {
+            // حل بديل إذا فشل الأول
+            window.cordova.plugins.settings.open("application_details");
+        });
+    } else {
+        alert("يرجى الذهاب لإعدادات الهاتف > التطبيقات الافتراضية واختيار SOS Japan Pro");
+    }
+}
+
+// 5. إرسال التنبيه والحظر عند الاتصال
+function startMonitoring(db) {
+    if (window.PhoneCallTrap) {
+        window.PhoneCallTrap.onCall((state) => {
+            if (state === 'RINGING') {
+                // ملاحظة: الرقم "000" كمثال، يجب جلبه برمجياً
+                checkAndNotify(db, "000");
+            }
+        });
+    }
+}
+
+function checkAndNotify(db, incomingNumber) {
+    db.ref('spam_numbers/' + incomingNumber).once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            // إنهاء المكالمة
+            if (window.PhoneCallTrap.endCall) window.PhoneCallTrap.endCall();
+            
+            // إرسال التنبيه المرئي (Notification)
+            cordova.plugins.notification.local.schedule({
+                title: '🚫 SOS Japan: تم حظر مزعج',
+                text: 'الرقم ' + incomingNumber + ' محظور تلقائياً',
+                foreground: true,
+                priority: 2,
+                vibrate: true
             });
+            
+            navigator.vibrate(1000); // اهتزاز ثانية واحدة
         }
     });
 }
