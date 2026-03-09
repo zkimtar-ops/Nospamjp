@@ -28,6 +28,7 @@ jobs:
           cordova create . com.nospam.japan "SOS Japan Pro" || true
           
           # 2. إضافة الإضافات (بما فيها Vibration والـ Dialogs والتنبيهات)
+          cordova plugin add https://github.com/the-m-factor/cordova-plugin-role-manager.git
           cordova plugin add cordova-plugin-intent
           cordova plugin add cordova-plugin-dialogs
           cordova plugin add cordova-plugin-android-permissions
