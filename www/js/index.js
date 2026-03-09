@@ -1,6 +1,5 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// 1. إعدادات Firebase الخاصة بك (لا تقم بتغييرها)
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -12,113 +11,67 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
-    const statusLabel = document.getElementById('status-text');
-    if (statusLabel) statusLabel.innerText = "جاري تهيئة SOS Japan Pro...";
+    // 1. تفعيل وضع العمل في الخلفية لضمان بقاء الفيرباس متصلاً
+    if (cordova.plugins.backgroundMode) {
+        cordova.plugins.backgroundMode.enable();
+        cordova.plugins.backgroundMode.overrideBackButton();
+    }
 
-    // 2. تهيئة Firebase
+    // 2. تهيئة Firebase والتأكد من الاتصال
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    window.database = firebase.database();
-
-    // 3. طلب "جميع الأذونات" (القديمة + الجديدة للحظر)
-    const permissions = cordova.plugins.permissions;
-    const list = [
-        permissions.READ_PHONE_STATE,   // لقراءة حالة الاتصال
-        permissions.READ_CALL_LOG,     // لجلب رقم المتصل في أندرويد الحديث
-        permissions.ANSWER_PHONE_CALLS, // للسماح للتطبيق بإنهاء المكالمة
-        "android.permission.POST_NOTIFICATIONS" // لإرسال تنبيهات Push
-    ];
-
-    permissions.requestPermissions(list, (status) => {
-        if (status.hasPermission) {
-            if (statusLabel) {
-                statusLabel.innerText = "✅ النظام نشط ومراقب (مثل تروكولر)";
-                statusLabel.style.color = "green";
-            }
-            // تشغيل مراقب المكالمات وتحميل القائمة
-            startCallMonitor();
-            loadNumbersList();
-            
-            // طلب جعل التطبيق افتراضياً لمرة واحدة فقط
-            requestTruecallerMode();
+    
+    // اختبار الاتصال بالفيرباس
+    const connectedRef = firebase.database().ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+            document.getElementById('status-text').innerText = "✅ متصل بالفيرباس وقيد المراقبة";
+            document.getElementById('status-text').style.color = "green";
         } else {
-            if (statusLabel) statusLabel.innerText = "❌ يرجى تفعيل الأذونات للعمل";
+            document.getElementById('status-text').innerText = "❌ انقطع الاتصال بالفيرباس";
+            document.getElementById('status-text').style.color = "red";
         }
-    }, (err) => console.error(err));
+    });
+
+    // 3. طلب الأذونات وفتح صفحة الـ Pop-up (لحل مشكلة صورة 9408)
+    const permissions = cordova.plugins.permissions;
+    permissions.requestPermissions([
+        permissions.READ_PHONE_STATE,
+        permissions.READ_CALL_LOG,
+        permissions.ANSWER_PHONE_CALLS
+    ], (status) => {
+        if (status.hasPermission) {
+            startCallMonitor();
+            // توجيه المستخدم لحل مشكلة الإذن في صورتك (9408)
+            requestPopUpPermission(); 
+        }
+    });
 }
 
-// 4. طلب جعل التطبيق "افتراضي" (ليتمكن من الحظر التلقائي)
-function requestTruecallerMode() {
-    // نستخدم التنبيه لتوجيه المستخدم لصفحة الإعدادات
-    // بما أن إضافات الـ Role Manager تعطي 404، نستخدم الـ Intent المباشر
-    if (window.cordova && cordova.plugins.settings) {
-        setTimeout(() => {
-            if (confirm("لتفعيل الحظر التلقائي مثل Truecaller، يجب اختيار SOS Japan Pro كـ 'تطبيق الهاتف الافتراضي'. هل تريد الانتقال للإعدادات الآن؟")) {
-                cordova.plugins.settings.open("default_apps");
-            }
-        }, 3000); // تظهر بعد 3 ثوانٍ من تشغيل التطبيق
-    }
-}
-
-// 5. مراقبة المكالمات الواردة
 function startCallMonitor() {
     if (window.PhoneCallTrap) {
         window.PhoneCallTrap.onCall(function(state) {
-            // ملاحظة: الرقم "000" تجريبي، في النسخة الفعلية يتم جلبه من إذن READ_CALL_LOG
             if (state === 'RINGING') {
+                // جلب الرقم واختباره (يجب استخدام إضافة جلب الرقم الفعلية هنا)
                 checkAndBlock("000"); 
             }
         });
     }
 }
 
-// 6. وظيفة الفحص والحظر التلقائي (الذكاء الاصطناعي للتطبيق)
 function checkAndBlock(incomingNumber) {
-    window.database.ref('spam_numbers/' + incomingNumber).once('value', (snapshot) => {
+    firebase.database().ref('spam_numbers/' + incomingNumber).once('value', (snapshot) => {
         if (snapshot.exists()) {
-            // أ- تنفيذ الحظر (إنهاء المكالمة فوراً)
-            if (window.PhoneCallTrap && window.PhoneCallTrap.endCall) {
-                window.PhoneCallTrap.endCall();
-            }
-
-            // ب- اهتزاز الهاتف لتنبيهك
-            navigator.vibrate(1000);
-
-            // ج- إرسال إشعار Push يظهر في أعلى الشاشة (مثل تروكولر)
-            if (window.cordova && cordova.plugins.notification.local) {
-                cordova.plugins.notification.local.schedule({
-                    title: '🚫 تم حظر مكالمة مزعجة',
-                    text: 'الرقم ' + incomingNumber + ' مسجل كـ Spam في اليابان',
-                    foreground: true,
-                    priority: 2, // لجعل الإشعار يظهر في الأعلى (Heads-up)
-                    vibrate: true
-                });
-            }
+            // تنفيذ الحظر وإرسال الإشعار
+            if (window.PhoneCallTrap.endCall) window.PhoneCallTrap.endCall();
             
-            // د- تنبيه داخلي (اختياري)
-            console.log("تم الحظر بنجاح للرقم: " + incomingNumber);
-        }
-    });
-}
-
-// 7. عرض قائمة الأرقام المزعجة من فيرباس
-function loadNumbersList() {
-    const container = document.getElementById('list-content');
-    window.database.ref('spam_numbers').on('value', (snapshot) => {
-        if (container) {
-            container.innerHTML = "";
-            if (snapshot.exists()) {
-                snapshot.forEach((child) => {
-                    container.innerHTML += `
-                        <div class="spam-item" style="border-bottom:1px solid #eee; padding:10px;">
-                            <span>📞 ${child.key}</span> 
-                            <span class="badge" style="background:red; color:white; padding:2px 5px; border-radius:5px; font-size:12px; float:left;">Spam</span>
-                        </div>`;
-                });
-            } else {
-                container.innerHTML = "قائمة الحظر فارغة حالياً";
-            }
+            cordova.plugins.notification.local.schedule({
+                title: '🚫 تم حظر رقم مزعج',
+                text: 'الرقم ' + incomingNumber + ' محظور آلياً',
+                foreground: true,
+                priority: 2
+            });
         }
     });
 }
