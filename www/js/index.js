@@ -59,17 +59,25 @@ function loadSpamNumbers(db) {
     });
 }
 
-// 4. حل مشكلة "الإعدادات لا تفتح" (استخدام الـ Intent المباشر)
+// 4. الانتقال المباشر لصفحة اختيار Default caller ID & spam app
 function showSetupAlert() {
     if (window.plugins && window.plugins.intentShim) {
+        // هذا الجزء يفتح النافذة التي تطلب اختيار تطبيقك كافتراضي للحظر مباشرة (مثل تروكولر)
         window.plugins.intentShim.startActivity({
-            action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
-        }, () => {}, () => {
-            // حل بديل إذا فشل الأول
-            window.cordova.plugins.settings.open("application_details");
+            action: "android.app.role.action.REQUEST_ROLE",
+            extras: {
+                "android.app.role.extra.ROLE_NAME": "android.app.role.CALL_SCREENING"
+            }
+        }, 
+        () => console.log("Success"), 
+        (err) => {
+            // حل بديل في حال فشل الانتقال المباشر
+            window.plugins.intentShim.startActivity({
+                action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
+            });
         });
     } else {
-        alert("يرجى الذهاب لإعدادات الهاتف > التطبيقات الافتراضية واختيار SOS Japan Pro");
+        alert("يرجى الذهاب للإعدادات واختيار SOS Japan Pro كتطبيق افتراضي للحظر");
     }
 }
 
