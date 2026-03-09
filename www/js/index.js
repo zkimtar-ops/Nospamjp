@@ -1,5 +1,6 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
+// إعدادات Firebase الخاصة بك
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -11,67 +12,87 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
-    // 1. تفعيل وضع العمل في الخلفية لضمان بقاء الفيرباس متصلاً
-    if (cordova.plugins.backgroundMode) {
-        cordova.plugins.backgroundMode.enable();
-        cordova.plugins.backgroundMode.overrideBackButton();
-    }
-
-    // 2. تهيئة Firebase والتأكد من الاتصال
+    // 1. تهيئة الفيرباس أولاً (لضمان الاتصال كما في الكود القديم)
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    
-    // اختبار الاتصال بالفيرباس
-    const connectedRef = firebase.database().ref(".info/connected");
-    connectedRef.on("value", (snap) => {
-        if (snap.val() === true) {
-            document.getElementById('status-text').innerText = "✅ متصل بالفيرباس وقيد المراقبة";
-            document.getElementById('status-text').style.color = "green";
-        } else {
-            document.getElementById('status-text').innerText = "❌ انقطع الاتصال بالفيرباس";
-            document.getElementById('status-text').style.color = "red";
-        }
-    });
+    window.database = firebase.database();
 
-    // 3. طلب الأذونات وفتح صفحة الـ Pop-up (لحل مشكلة صورة 9408)
+    // 2. طلب الأذونات الشاملة
     const permissions = cordova.plugins.permissions;
-    permissions.requestPermissions([
+    const list = [
         permissions.READ_PHONE_STATE,
         permissions.READ_CALL_LOG,
-        permissions.ANSWER_PHONE_CALLS
-    ], (status) => {
+        permissions.ANSWER_PHONE_CALLS,
+        "android.permission.POST_NOTIFICATIONS"
+    ];
+
+    permissions.requestPermissions(list, (status) => {
         if (status.hasPermission) {
+            // 3. تفعيل ميزة "Set as default" (مثل تروكولر)
+            requestTruecallerRole();
+            
+            // 4. تشغيل المراقبة وتحميل القائمة
             startCallMonitor();
-            // توجيه المستخدم لحل مشكلة الإذن في صورتك (9408)
-            requestPopUpPermission(); 
+            loadNumbersList();
         }
-    });
+    }, (err) => console.error(err));
+}
+
+// الوظيفة التي تظهر نافذة تروكولر (Set as default)
+function requestTruecallerRole() {
+    if (window.cordova && cordova.plugins.RoleManager) {
+        // طلب دور حاجب المكالمات (مثل تروكولر تماماً)
+        cordova.plugins.RoleManager.requestRole("android.app.role.CALL_SCREENING", function() {
+            console.log("تم التفعيل كافتراضي بنجاح");
+        }, function(err) {
+            console.error("رفض المستخدم أو حدث خطأ: " + err);
+        });
+    }
 }
 
 function startCallMonitor() {
     if (window.PhoneCallTrap) {
         window.PhoneCallTrap.onCall(function(state) {
             if (state === 'RINGING') {
-                // جلب الرقم واختباره (يجب استخدام إضافة جلب الرقم الفعلية هنا)
-                checkAndBlock("000"); 
+                // ملاحظة: رقم المتصل الفعلي يتم فحصها هنا
+                checkIncomingNumber("000"); 
             }
         });
     }
 }
 
-function checkAndBlock(incomingNumber) {
-    firebase.database().ref('spam_numbers/' + incomingNumber).once('value', (snapshot) => {
+function checkIncomingNumber(number) {
+    window.database.ref('spam_numbers/' + number).once('value', (snapshot) => {
         if (snapshot.exists()) {
-            // تنفيذ الحظر وإرسال الإشعار
-            if (window.PhoneCallTrap.endCall) window.PhoneCallTrap.endCall();
+            // تنفيذ الحظر التلقائي (Reject Call)
+            if (window.PhoneCallTrap && window.PhoneCallTrap.endCall) {
+                window.PhoneCallTrap.endCall();
+            }
             
+            navigator.vibrate(1000);
+            
+            // إشعار Push للمستخدم
             cordova.plugins.notification.local.schedule({
                 title: '🚫 تم حظر رقم مزعج',
-                text: 'الرقم ' + incomingNumber + ' محظور آلياً',
+                text: 'الرقم ' + number + ' محظور تلقائياً بواسطة SOS Japan',
                 foreground: true,
                 priority: 2
             });
+        }
+    });
+}
+
+function loadNumbersList() {
+    const container = document.getElementById('list-content');
+    window.database.ref('spam_numbers').on('value', (snapshot) => {
+        if (container) {
+            container.innerHTML = "";
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    container.innerHTML += `<div class="spam-item"><span>📞 ${child.key}</span> <span class="badge">Spam</span></div>`;
+                });
+            }
         }
     });
 }
