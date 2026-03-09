@@ -1,6 +1,5 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// إعدادات الفيرباس الخاصة بك
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -12,26 +11,23 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
-    // 1. تهيئة الفيرباس والاتصال بقاعدة البيانات
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
     const db = firebase.database();
 
-    // فحص حالة الاتصال بالفيرباس
     db.ref(".info/connected").on("value", (snap) => {
         const statusLabel = document.getElementById('status-text');
         if (snap.val() === true) {
             statusLabel.innerText = "✅ متصل الآن بـ nospam-9a4af";
             statusLabel.style.color = "green";
-            loadSpamNumbers(db); 
+            loadSpamNumbers(db);
         } else {
             statusLabel.innerText = "❌ جاري محاولة الربط بالفيرباس...";
             statusLabel.style.color = "red";
         }
     });
 
-    // 2. طلب كافة الأذونات المطلوبة (المكالمات، السجلات، التنبيهات)
     const permissions = cordova.plugins.permissions;
     permissions.requestPermissions([
         permissions.READ_PHONE_STATE,
@@ -43,7 +39,6 @@ function onDeviceReady() {
     });
 }
 
-// 3. جلب أرقام السبام من الفيرباس
 function loadSpamNumbers(db) {
     const listDiv = document.getElementById('list-content');
     db.ref('spam_numbers').on('value', (snapshot) => {
@@ -60,35 +55,50 @@ function loadSpamNumbers(db) {
     });
 }
 
-// 4. الفتح المباشر لشاشة Default caller ID & spam app
-function showSetupAlert() {
-    if (window.plugins && window.plugins.intentShim) {
-        // استخدام نظام الأدوار (Role Manager) لفتح النافذة مباشرة
-        window.plugins.intentShim.startActivity({
-            action: "android.app.role.action.REQUEST_ROLE",
-            extras: {
-                "android.app.role.extra.ROLE_NAME": "android.app.role.CALL_SCREENING"
-            }
-        }, 
-        () => { console.log("Success"); }, 
-        (err) => {
-            // حل بديل في حال فشل الطلب المباشر لفتح الإعدادات العامة
+// زر الخيار الأول: النافذة المباشرة (REQUEST_ROLE)
+function showDirectRoleRequest() {
+    console.log("Attempting Direct Role Request...");
+    try {
+        if (window.plugins && window.plugins.intentShim) {
             window.plugins.intentShim.startActivity({
-                action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
+                action: "android.app.role.action.REQUEST_ROLE",
+                extras: {
+                    "android.app.role.extra.ROLE_NAME": "android.app.role.CALL_SCREENING"
+                }
+            }, 
+            () => { console.log("Success"); }, 
+            (err) => { 
+                console.error("Direct failed, opening general settings");
+                openDefaultAppsSettings(); // استدعاء الخيار الثاني تلقائياً عند الفشل
             });
-        });
-    } else {
-        alert("يرجى اختيار SOS Japan Pro من إعدادات الهاتف");
+        } else {
+            alert("إضافة Intent غير جاهزة بعد");
+        }
+    } catch (e) {
+        openDefaultAppsSettings();
     }
 }
 
-// 5. مراقبة المكالمات والحظر التلقائي
+// زر الخيار الثاني: الإعدادات العامة (MANAGE_DEFAULT_APPS)
+function openDefaultAppsSettings() {
+    console.log("Opening General Settings...");
+    if (window.plugins && window.plugins.intentShim) {
+        window.plugins.intentShim.startActivity({
+            action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
+        }, () => {}, () => {
+            // حل أخير إذا فشل كل شيء
+            window.cordova.plugins.settings.open("application_details");
+        });
+    } else {
+        alert("يرجى التأكد من تثبيت cordova-plugin-intent في الـ YAML");
+    }
+}
+
 function startMonitoring(db) {
     if (window.PhoneCallTrap) {
         window.PhoneCallTrap.onCall((state) => {
             if (state === 'RINGING') {
-                // ملاحظة: يجب جلب الرقم الفعلي برمجياً هنا
-                checkAndNotify(db, "000"); 
+                checkAndNotify(db, "000");
             }
         });
     }
@@ -98,8 +108,6 @@ function checkAndNotify(db, incomingNumber) {
     db.ref('spam_numbers/' + incomingNumber).once('value', (snapshot) => {
         if (snapshot.exists()) {
             if (window.PhoneCallTrap.endCall) window.PhoneCallTrap.endCall();
-            
-            // إرسال تنبيه محلي
             cordova.plugins.notification.local.schedule({
                 title: '🚫 SOS Japan: تم حظر مزعج',
                 text: 'الرقم ' + incomingNumber + ' محظور تلقائياً',
@@ -107,8 +115,7 @@ function checkAndNotify(db, incomingNumber) {
                 priority: 2,
                 vibrate: true
             });
-            
-            navigator.vibrate(1000); 
+            navigator.vibrate(1000);
         }
     });
 }
