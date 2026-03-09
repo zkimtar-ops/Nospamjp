@@ -21,7 +21,6 @@
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
             <application android:usesCleartextTraffic="true" />
         </edit-config>
-
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <service android:name="com.nospam.japan.CallScreeningService"
                      android:permission="android.permission.BIND_SCREENING_SERVICE"
