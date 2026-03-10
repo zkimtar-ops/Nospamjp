@@ -6,30 +6,58 @@
     <title>SOS Japan Pro</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <style>
-        body { font-family: sans-serif; margin: 0; background: #f0f2f5; text-align: center; }
-        .swiper { width: 100%; height: 260px; background: #fff; border-bottom: 2px solid #ddd; }
-        .swiper-slide { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .btn-action { background: #007bff; color: white; border: none; padding: 15px; width: 90%; margin: 20px auto; border-radius: 10px; font-size: 18px; cursor: pointer; display: block; }
-        .notif-container { padding: 15px; display: none; text-align: right; }
-        .notif-card { background: white; padding: 12px; margin-bottom: 10px; border-radius: 8px; border-right: 5px solid #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f8f9fa; color: #333; }
+        
+        /* تنسيق السلايدر */
+        .swiper { width: 100%; height: 280px; background: #fff; border-bottom: 1px solid #ddd; }
+        .swiper-slide { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .swiper-slide h3 { color: #007bff; margin-bottom: 10px; }
+        
+        /* تنسيق الأزرار */
+        .btn-action { 
+            background: #007bff; color: white; border: none; padding: 16px; 
+            width: 90%; margin: 25px 5%; border-radius: 12px; font-size: 18px; 
+            font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,123,255,0.2);
+        }
+        
+        /* حاوية التنبيهات والأرقام */
+        .notif-container { padding: 20px; display: none; }
+        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-right: 4px solid #007bff; padding-right: 10px; }
+        
+        /* كارت الرقم المحظور */
+        .notif-card { 
+            background: white; padding: 15px; margin-bottom: 12px; border-radius: 10px; 
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #eee;
+        }
+        .status-tag { background: #fee; color: #d9534f; padding: 4px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        
+        /* إخفاء العناصر */
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div id="guide-slider" class="swiper">
+    <div class="swiper" id="guide-slider">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><h3>مرحباً زكي 🚫</h3><p>SOS Japan Pro يحميك من المكالمات المزعجة</p></div>
-            <div class="swiper-slide"><h3>خطوة التفعيل ⚙️</h3><p>اضغط الزر بالأسفل واختر تطبيقنا كـ Spam App افتراضي</p></div>
+            <div class="swiper-slide">
+                <h3>مرحباً بك 🚫</h3>
+                <p>نحن نحميك من المكالمات الاحتيالية والمزعجة في اليابان.</p>
+            </div>
+            <div class="swiper-slide">
+                <h3>تفعيل الحماية ⚙️</h3>
+                <p>يجب تعيين التطبيق كـ <b>Spam App</b> افتراضي ليعمل الحظر المباشر.</p>
+            </div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
 
-    <button id="activate-btn" class="btn-action" onclick="goToSettings()">تفعيل الحماية الآن</button>
+    <button id="activate-btn" class="btn-action" onclick="goToSettings()">تفعيل حماية المكالمات الآن</button>
 
     <div id="notif-page" class="notif-container">
-        <h4>🔔 الأرقام المحظورة والتنبيهات:</h4>
-        <div id="list-content"></div>
+        <div class="section-title">الأرقام المحظورة حالياً 🔔</div>
+        <div id="list-content">
+            </div>
     </div>
 
     <script src="cordova.js"></script>
