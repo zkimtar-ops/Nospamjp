@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.nospam.japan" version="1.7.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+<widget id="com.nospam.japan" version="1.8.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>SOS Japan Pro</name>
     <description>نظام حماية وحظر المكالمات المزعجة</description>
     <author email="dev@zakaria.com">Zakaria MZ Matar</author>
@@ -41,7 +41,6 @@
             <uses-permission android:name="android.permission.VIBRATE" />
             <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-            <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
         </config-file>
     </platform>
 </widget>
