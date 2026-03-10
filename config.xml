@@ -12,14 +12,18 @@
 
     <platform name="android">
         <feature name="IntentShim">
-    <param name="android-package" value="com.napolitano.cordova.plugin.intent.IntentShim" />
-</feature>
+            <param name="android-package" value="com.napolitano.cordova.plugin.intent.IntentShim" />
+        </feature>
+        
         <preference name="AndroidXEnabled" value="true" />
         <preference name="android-minSdkVersion" value="26" />
         <preference name="android-targetSdkVersion" value="34" />
         
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
             <application android:usesCleartextTraffic="true" />
+        </edit-config>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <service android:name="com.nospam.japan.CallScreeningService"
                      android:permission="android.permission.BIND_SCREENING_SERVICE"
                      android:exported="true">
@@ -47,7 +51,6 @@
             <uses-permission android:name="android.permission.VIBRATE" />
             <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" /> 
             <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
-            <uses-permission android:name="android.permission.ACTION_MANAGE_OVERLAY_PERMISSION" />
         </config-file>
     </platform>
 </widget>
