@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.nospam.japan" version="1.2.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+<widget id="com.nospam.japan" version="1.2.5" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>SOS Japan Pro</name>
-    <description>Japan Safety System - Call Blocker</description>
+    <description>Safety and Call Blocker System for Japan</description>
     <author email="dev@zakaria.com">Zakaria MZ Matar</author>
     <content src="index.html" />
     <access origin="*" />
@@ -19,9 +19,11 @@
         <preference name="android-minSdkVersion" value="26" />
         <preference name="android-targetSdkVersion" value="34" />
 
-        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
             <application android:usesCleartextTraffic="true" />
+        </edit-config>
 
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <service android:name="com.nospam.japan.CallScreeningService"
                      android:permission="android.permission.BIND_SCREENING_SERVICE"
                      android:exported="true">
@@ -39,13 +41,14 @@
 
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
             <uses-permission android:name="android.permission.READ_CALL_LOG" />
             <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
             <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
             <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
             <uses-permission android:name="android.permission.VIBRATE" />
-            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+            <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
         </config-file>
     </platform>
 </widget>
