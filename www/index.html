@@ -2,115 +2,36 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Safety Call Japan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOS Japan Pro</title>
     <style>
-        :root { --primary: #c0392b; --success: #27ae60; --gray: #f8f9fa; }
-        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--gray); display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .card { background: white; width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
-        .status-list { background: #fdfdfd; border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
-        .status-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; background: #ddd; transition: 0.3s; }
-        .dot-active { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .btn { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        .btn-alt { background: #34495e; }
-        .btn:active { transform: scale(0.98); }
-        #debug { font-size: 11px; color: #999; margin-top: 15px; line-height: 1.4; }
+        body { font-family: Arial, sans-serif; text-align: center; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .btn { background: #007bff; color: white; border: none; padding: 15px 25px; border-radius: 8px; font-size: 18px; width: 100%; cursor: pointer; margin-top: 20px; }
+        .btn:disabled { background: #ccc; }
+        .status { margin: 15px 0; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div class="card">
+        <h2>إعدادات الحماية 🚫</h2>
+        <div id="status-db" class="status">جاري فحص الاتصال...</div>
+        
+        <p style="text-align: right; font-size: 14px; color: #555;">
+            لتشغيل الحظر، يجب تعيين التطبيق كـ <b>Default Spam App</b> في الصفحة التالية.
+        </p>
 
-<div class="card">
-    <h2 style="margin-top:0;">🛡️ إعداد الحماية</h2>
-    <p style="font-size:13px; color:#666;">يجب تحويل كافة النقاط للأخضر لتفعيل الحظر التلقائي.</p>
+        <label style="display: block; margin: 15px 0;">
+            <input type="checkbox" id="terms" onchange="document.getElementById('go-btn').disabled = !this.checked">
+            أوافق على منح كافة الصلاحيات للحماية
+        </label>
 
-    <div class="status-list">
-        <div class="status-item"><span>1. صلاحية الوصول للمكالمات</span> <div id="d1" class="dot"></div></div>
-        <div class="status-item"><span>2. صلاحية سجل الهاتف</span> <div id="d2" class="dot"></div></div>
-        <div class="status-item"><span>3. صلاحية الرد والحظر</span> <div id="d3" class="dot"></div></div>
-        <div class="status-item"><span>4. تعيين التطبيق كافتراضي</span> <div id="d4" class="dot"></div></div>
+        <button id="go-btn" class="btn" onclick="openDefaultApps()" disabled>الانتقال للإعدادات وتفعيل الحظر</button>
     </div>
 
-    <button class="btn" onclick="startPermissionSequence()">تفعيل الصلاحيات (خطوة 1)</button>
-    <button class="btn btn-alt" onclick="requestRoleManager()">تعيين كافتراضي (خطوة 2)</button>
-    <button class="btn btn-alt" style="background:#7f8c8d;" onclick="openAppSettings()">الإعدادات اليدوية</button>
-    
-    <div id="debug">الحالة: بانتظار التفاعل...</div>
-</div>
-
-<script src="cordova.js"></script>
-<script>
-    const perms = [
-        "android.permission.READ_PHONE_STATE",
-        "android.permission.READ_CALL_LOG",
-        "android.permission.ANSWER_PHONE_CALLS"
-    ];
-
-    document.addEventListener('deviceready', checkAll, false);
-
-    function checkAll() {
-        if(!window.cordova) return;
-        const pPlugin = cordova.plugins.permissions;
-        perms.forEach((p, i) => {
-            pPlugin.hasPermission(p, (status) => {
-                if(status.hasPermission) document.getElementById('d' + (i+1)).classList.add('dot-active');
-            });
-        });
-    }
-
-    async function startPermissionSequence() {
-        updateLog("جاري طلب الصلاحيات...");
-        const pPlugin = cordova.plugins.permissions;
-        
-        for (let i = 0; i < perms.length; i++) {
-            await new Promise((resolve) => {
-                pPlugin.requestPermission(perms[i], (status) => {
-                    if(status.hasPermission) document.getElementById('d' + (i+1)).classList.add('dot-active');
-                    resolve();
-                }, () => resolve());
-            });
-        }
-        updateLog("تم الانتهاء من طلب الصلاحيات. انتقل للخطوة 2.");
-    }
-
-    function requestRoleManager() {
-        updateLog("محاولة فتح نافذة النظام...");
-        if (window.plugins && window.plugins.intentShim) {
-            window.plugins.intentShim.startActivityForResult(
-                {
-                    action: "android.app.role.action.REQUEST_ROLE",
-                    extras: { "android.app.role.extra.ROLE_NAME": "android.app.role.CALL_SCREENING" }
-                },
-                () => { 
-                    document.getElementById('d4').classList.add('dot-active');
-                    updateLog("تم التفعيل بنجاح ✅");
-                },
-                () => { 
-                    updateLog("فشل الطلب التلقائي. يرجى التفعيل يدوياً.");
-                    openDefaultApps();
-                }
-            );
-        } else {
-            openDefaultApps();
-        }
-    }
-
-    function openDefaultApps() {
-        if (window.plugins && window.plugins.intentShim) {
-            window.plugins.intentShim.startActivity({ action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS" }, () => {}, () => {
-                cordova.plugins.settings.open("application_details", () => {}, () => {});
-            });
-        }
-    }
-
-    function openAppSettings() {
-        if(window.cordova && cordova.plugins.settings) {
-            cordova.plugins.settings.open("application_details", () => {}, () => {});
-        }
-    }
-
-    function updateLog(t) { document.getElementById('debug').innerText = "الحالة: " + t; }
-</script>
+    <script src="cordova.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="js/index.js"></script>
 </body>
 </html>
-
