@@ -1,35 +1,59 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.nospam.japan" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
-    <name>Safety Call Japan</name>
-    <description>نظام حماية المكالمات المتقدم</description>
-    <author email="dev@nospam.jp">Zakaria</author>
+<widget id="com.nospam.japan" version="1.5.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>SOS Japan Pro</name>
+    <description>نظام حماية وحظر المكالمات المزعجة الشامل</description>
+    <author email="dev@zakaria.com">Zakaria MZ Matar</author>
     
     <content src="index.html" />
-    <preference name="AndroidXEnabled" value="true" />
+    <access origin="*" />
+    <allow-navigation href="*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="https://*/*" />
 
     <platform name="android">
-        <resource-file src="google-services.json" target="app/google-services.json" />
-        
-        <config-file target="AndroidManifest.xml" parent="/*">
-            <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-            <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
-            <uses-permission android:name="android.permission.READ_CALL_LOG" />
-            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-            <uses-permission android:name="android.permission.BIND_CALL_SCREENING_SERVICE" />
-        </config-file>
+        <preference name="AndroidXEnabled" value="true" />
+        <preference name="android-minSdkVersion" value="26" />
+        <preference name="android-targetSdkVersion" value="34" />
 
-        <!-- تسجيل الخدمة رسمياً لكي يظهر التطبيق في قائمة "التطبيقات الافتراضية" -->
+        <feature name="IntentShim">
+            <param name="android-package" value="com.napolitano.cordova.plugin.intent.IntentShim" />
+        </feature>
+
+        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
+            <application android:usesCleartextTraffic="true" android:allowBackup="true" />
+        </edit-config>
+
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <service android:name="com.nospam.japan.CallBlockerService"
-                     android:permission="android.permission.BIND_CALL_SCREENING_SERVICE"
+            <service android:name="com.nospam.japan.CallScreeningService"
+                     android:permission="android.permission.BIND_SCREENING_SERVICE"
                      android:exported="true">
                 <intent-filter>
                     <action android:name="android.telecom.CallScreeningService" />
                 </intent-filter>
             </service>
+            <service android:name="com.nospam.japan.MyFirebaseMessagingService" android:exported="false">
+                <intent-filter>
+                    <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                </intent-filter>
+            </service>
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+            <uses-permission android:name="android.permission.READ_CALL_LOG" />
+            <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+            <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+            <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
+            <uses-permission android:name="android.permission.CALL_PHONE" />
+            <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+            <uses-permission android:name="android.permission.VIBRATE" />
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+            <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+            <uses-permission android:name="android.permission.BIND_SCREENING_SERVICE" />
         </config-file>
     </platform>
-
-    <access origin="*" />
-    <allow-intent href="tel:*" />
 </widget>
