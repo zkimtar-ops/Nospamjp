@@ -14,70 +14,46 @@ function onDeviceReady() {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 1. فحص الحالة فور فتح التطبيق
-    checkRealRoleStatus();
+    // 1. طلب كافة الأذونات فوراً
+    requestAllPermissions();
 
-    // 2. إعادة الفحص فور عودة المستخدم من شاشة الإعدادات (أهم خطوة)
-    document.addEventListener("resume", () => {
-        console.log("عاد المستخدم للتطبيق، جاري فحص الحالة الحقيقية...");
-        checkRealRoleStatus();
-    }, false);
+    // 2. التحقق من المرة الأولى لإظهار شاشة الشرح
+    if (!localStorage.getItem('first_run_done')) {
+        document.getElementById('welcome-overlay').classList.remove('hidden');
+    }
 
-    // ربط البيانات
+    // 3. مزامنة بيانات الفيرباس
     syncFirebase(db);
 }
 
-// هذه الدالة لا تعتمد على الضغط، بل تسأل نظام أندرويد عن حالته
-function checkRealRoleStatus() {
-    if (window.plugins && window.plugins.intentShim) {
-        /* نحاول فتح طلب "الدور" (Role Request)؛ 
-           في أندرويد، إذا كان التطبيق مفعلاً مسبقاً، النظام لن يفتح النافذة 
-           وسيعيد نتيجة فورية تخبرنا أن التطبيق "لديه الدور" بالفعل.
-        */
-        window.plugins.intentShim.startActivityForResult({
-            action: "android.app.role.action.REQUEST_ROLE",
-            extras: {
-                "android.app.role.extra.ROLE_NAME": "android.app.role.CALL_SCREENING"
-            }
-        }, 
-        function(result) {
-            // result.resultCode سيكون -1 إذا وافق المستخدم الآن أو كان مفعلاً مسبقاً
-            if (result.resultCode === -1) {
-                console.log("تأكيد: التطبيق هو الافتراضي حالياً.");
-                showProtectedUI(); // إخفاء الزر وإظهار التنبيهات
-            } else {
-                console.log("تنبيه: المستخدم لم يختار التطبيق كافتراضي.");
-                showActivationUI(); // إبقاء الزر ظاهراً
-            }
-        }, 
-        function(err) {
-            console.error("فشل فحص الحالة", err);
-        });
-    }
+function requestAllPermissions() {
+    const permissions = cordova.plugins.permissions;
+    const list = [
+        permissions.READ_PHONE_STATE,
+        permissions.READ_CALL_LOG,
+        permissions.ANSWER_PHONE_CALLS,
+        permissions.READ_PHONE_NUMBERS,
+        permissions.POST_NOTIFICATIONS,
+        permissions.SYSTEM_ALERT_WINDOW
+    ];
+    permissions.requestPermissions(list, (s) => console.log("Permissions OK"), (e) => console.error(e));
+}
+
+function firstTimeActivate() {
+    // حفظ أن الشرح تم رؤيته
+    localStorage.setItem('first_run_done', 'true');
+    document.getElementById('welcome-overlay').classList.add('hidden');
+    
+    // فتح الإعدادات فوراً
+    goToSettings();
 }
 
 function goToSettings() {
     if (window.plugins && window.plugins.intentShim) {
-        // نفتح الإعدادات ولا نغير أي شيء في الواجهة هنا
         window.plugins.intentShim.startActivity({
             action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
-        }, 
-        () => { console.log("تم فتح الإعدادات بنجاح"); }, 
-        (err) => { alert("خطأ في فتح الإعدادات"); }
-        );
+        }, () => {}, (e) => alert("خطأ في فتح الإعدادات"));
     }
-}
-
-function showProtectedUI() {
-    document.getElementById('activate-btn').classList.add('hidden');
-    document.getElementById('guide-slider').classList.add('hidden');
-    document.getElementById('notif-page').style.display = 'block';
-}
-
-function showActivationUI() {
-    document.getElementById('activate-btn').classList.remove('hidden');
-    document.getElementById('guide-slider').classList.remove('hidden');
-    document.getElementById('notif-page').style.display = 'none';
 }
 
 function syncFirebase(db) {
