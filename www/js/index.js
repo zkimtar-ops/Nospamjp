@@ -1,6 +1,5 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
-// بيانات الفيرباس الخاصة بك يا زكي
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -12,53 +11,29 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
-    console.log("التطبيق جاهز للعمل...");
-
-    // 1. تهيئة السلايدر (الشرح)
-    if (typeof Swiper !== 'undefined') {
-        new Swiper('.swiper', { pagination: { el: '.swiper-pagination' } });
-    }
-
-    // 2. تهيئة Firebase
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 3. طلب الأذونات الأساسية فور التشغيل
-    requestInitialPermissions();
+    // 1. فحص الحالة فور فتح التطبيق
+    checkRealRoleStatus();
 
-    // 4. الفحص الحقيقي لحالة التطبيق (هل هو الافتراضي؟)
-    checkRealAppStatus();
+    // 2. إعادة الفحص فور عودة المستخدم من شاشة الإعدادات (أهم خطوة)
+    document.addEventListener("resume", () => {
+        console.log("عاد المستخدم للتطبيق، جاري فحص الحالة الحقيقية...");
+        checkRealRoleStatus();
+    }, false);
 
-    // 5. إعادة الفحص تلقائياً عندما يعود المستخدم من الإعدادات إلى التطبيق
-    document.addEventListener("resume", checkRealAppStatus, false);
-
-    // 6. مزامنة البيانات من الفيرباس (أرقام وتنبيهات)
-    syncFirebaseData(db);
+    // ربط البيانات
+    syncFirebase(db);
 }
 
-// دالة طلب الأذونات (لضمان ظهور النوافذ في أندرويد 14)
-function requestInitialPermissions() {
-    const permissions = cordova.plugins.permissions;
-    const list = [
-        permissions.READ_PHONE_STATE,
-        permissions.READ_CALL_LOG,
-        permissions.ANSWER_PHONE_CALLS,
-        permissions.POST_NOTIFICATIONS,
-        permissions.SYSTEM_ALERT_WINDOW
-    ];
-    permissions.requestPermissions(list, (status) => {
-        console.log("تمت معالجة طلب الأذونات");
-    }, (err) => {
-        console.error("خطأ في طلب الأذونات", err);
-    });
-}
-
-// دالة الفحص الحقيقي (تمنع اختفاء الزر بالخطأ)
-function checkRealAppStatus() {
+// هذه الدالة لا تعتمد على الضغط، بل تسأل نظام أندرويد عن حالته
+function checkRealRoleStatus() {
     if (window.plugins && window.plugins.intentShim) {
-        // نحاول طلب "الدور" (Role)؛ إذا كان التطبيق مفعل مسبقاً، النظام لن يظهر شيئاً أو سيعطي نتيجة OK
+        /* نحاول فتح طلب "الدور" (Role Request)؛ 
+           في أندرويد، إذا كان التطبيق مفعلاً مسبقاً، النظام لن يفتح النافذة 
+           وسيعيد نتيجة فورية تخبرنا أن التطبيق "لديه الدور" بالفعل.
+        */
         window.plugins.intentShim.startActivityForResult({
             action: "android.app.role.action.REQUEST_ROLE",
             extras: {
@@ -66,85 +41,51 @@ function checkRealAppStatus() {
             }
         }, 
         function(result) {
-            // resultCode: -1 يعني أن المستخدم اختار التطبيق كافتراضي الآن
+            // result.resultCode سيكون -1 إذا وافق المستخدم الآن أو كان مفعلاً مسبقاً
             if (result.resultCode === -1) {
-                activateAppUI();
+                console.log("تأكيد: التطبيق هو الافتراضي حالياً.");
+                showProtectedUI(); // إخفاء الزر وإظهار التنبيهات
             } else {
-                // إذا كانت النتيجة 0، نتحقق من الذاكرة (ربما تم التفعيل سابقاً)
-                if(localStorage.getItem('is_permanently_activated') === 'true') {
-                    activateAppUI();
-                } else {
-                    deactivateAppUI();
-                }
+                console.log("تنبيه: المستخدم لم يختار التطبيق كافتراضي.");
+                showActivationUI(); // إبقاء الزر ظاهراً
             }
         }, 
         function(err) {
-            console.error("فشل فحص الحالة الحقيقية", err);
+            console.error("فشل فحص الحالة", err);
         });
     }
 }
 
-// دالة الانتقال للإعدادات
 function goToSettings() {
     if (window.plugins && window.plugins.intentShim) {
-        // نفتح صفحة "التطبيقات الافتراضية" مباشرة
+        // نفتح الإعدادات ولا نغير أي شيء في الواجهة هنا
         window.plugins.intentShim.startActivity({
             action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
         }, 
-        function() {
-            console.log("تم فتح الإعدادات");
-            // لا نخفي الزر هنا؛ ننتظر عودة المستخدم وفحص الحالة في resume
-        }, 
-        function(err) {
-            alert("لا يمكن فتح الإعدادات حالياً");
-        });
+        () => { console.log("تم فتح الإعدادات بنجاح"); }, 
+        (err) => { alert("خطأ في فتح الإعدادات"); }
+        );
     }
 }
 
-function activateAppUI() {
-    localStorage.setItem('is_permanently_activated', 'true');
+function showProtectedUI() {
     document.getElementById('activate-btn').classList.add('hidden');
     document.getElementById('guide-slider').classList.add('hidden');
     document.getElementById('notif-page').style.display = 'block';
 }
 
-function deactivateAppUI() {
+function showActivationUI() {
     document.getElementById('activate-btn').classList.remove('hidden');
     document.getElementById('guide-slider').classList.remove('hidden');
     document.getElementById('notif-page').style.display = 'none';
 }
 
-function syncFirebaseData(db) {
-    // جلب قائمة الأرقام المحظورة من الفيرباس وعرضها
-    db.ref('spam_numbers').on('value', (snapshot) => {
+function syncFirebase(db) {
+    db.ref('spam_numbers').on('value', (snap) => {
         const container = document.getElementById('list-content');
         container.innerHTML = "";
-        if (snapshot.exists()) {
-            snapshot.forEach((child) => {
-                container.innerHTML += `<div class="notif-card">🚫 رقم محظور: ${child.key}</div>`;
-            });
-        } else {
-            container.innerHTML = "<p>لا توجد أرقام محظورة حالياً.</p>";
-        }
-    });
-
-    // جلب التنبيهات الجديدة (Push Notifications)
-    db.ref('alerts').on('child_added', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            sendSystemNotification(data.title, data.message);
-        }
-    });
-}
-
-function sendSystemNotification(title, msg) {
-    if (window.cordova && cordova.plugins.notification) {
-        cordova.plugins.notification.local.schedule({
-            title: title,
-            text: msg,
-            foreground: true,
-            priority: 2,
-            vibrate: true
+        snap.forEach((child) => {
+            container.innerHTML += `<div class="notif-card">📞 محظور: ${child.key}</div>`;
         });
-    }
+    });
 }
