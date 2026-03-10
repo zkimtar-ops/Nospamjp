@@ -1,5 +1,6 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
+// بيانات الفيرباس الخاصة بك يا زكي
 const firebaseConfig = {
     apiKey: "AIzaSyC8ABk0QLlocOBaUF7a_HeiQoMyOw9eDZc",
     authDomain: "nospam-9a4af.firebaseapp.com",
@@ -11,27 +12,36 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
-    // 1. تهيئة السلايدر
     new Swiper('.swiper', { pagination: { el: '.swiper-pagination' } });
 
-    // 2. تهيئة Firebase
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 3. فحص هل التطبيق هو الافتراضي حالياً لإخفاء الزر
-    checkAppStatus();
+    // فحص الأذونات عند التشغيل
+    requestPermissions();
 
-    // 4. إعادة الفحص عند العودة من الإعدادات
+    // فحص حالة التفعيل لإخفاء الزر
+    checkAppStatus();
     document.addEventListener("resume", checkAppStatus, false);
 
-    // 5. ربط البيانات (أرقام وتنبيهات)
-    syncData(db);
+    // جلب الأرقام والتنبيهات
+    syncFirebase(db);
+}
+
+function requestPermissions() {
+    const permissions = cordova.plugins.permissions;
+    const list = [
+        permissions.READ_PHONE_STATE,
+        permissions.READ_CALL_LOG,
+        permissions.ANSWER_PHONE_CALLS,
+        permissions.SYSTEM_ALERT_WINDOW,
+        permissions.POST_NOTIFICATIONS
+    ];
+    permissions.requestPermissions(list, (s) => console.log("OK"), (e) => console.error(e));
 }
 
 function checkAppStatus() {
-    // نستخدم IntentShim لمحاولة طلب الدور؛ إذا لم تظهر نافذة، فالتطبيق مفعل
-    // في شاومي، الأفضل هو فحص الاستجابة بعد العودة
-    // سنقوم بإظهار صفحة التنبيهات إذا كان المستخدم قد ضغط الزر مسبقاً بنجاح
+    // إذا ضغط المستخدم على الزر سابقاً، نظهر صفحة التنبيهات
     if(localStorage.getItem('activated') === 'true') {
         document.getElementById('activate-btn').classList.add('hidden');
         document.getElementById('guide-slider').classList.add('hidden');
@@ -45,35 +55,31 @@ function goToSettings() {
             action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
         }, () => {
             localStorage.setItem('activated', 'true');
-        }, (err) => { alert("خطأ في فتح الإعدادات"); });
+            checkAppStatus();
+        }, (err) => alert("خطأ في فتح الإعدادات"));
     }
 }
 
-function syncData(db) {
-    // جلب الأرقام المحظورة
+function syncFirebase(db) {
+    // 1. جلب الأرقام المحظورة للعرض
     db.ref('spam_numbers').on('value', (snap) => {
-        const numbers = snap.val();
-        localStorage.setItem('blocked_list', JSON.stringify(numbers));
+        const container = document.getElementById('list-content');
+        container.innerHTML = "";
+        snap.forEach((child) => {
+            container.innerHTML += `<div class="notif-card">📞 رقم محظور: ${child.key}</div>`;
+        });
     });
 
-    // جلب التنبيهات الجديدة وإرسال Push Notification
+    // 2. جلب التنبيهات وإرسال Push Notification
     db.ref('alerts').on('child_added', (snap) => {
-        const alertData = snap.val();
-        renderAlert(alertData);
-        sendPush(alertData.title, alertData.message);
+        const data = snap.val();
+        sendPush(data.title, data.message);
     });
-}
-
-function renderAlert(data) {
-    const container = document.getElementById('list-content');
-    const html = `<div class="notif-card"><b>${data.title}</b><br><small>${data.message}</small></div>`;
-    container.innerHTML = html + container.innerHTML;
 }
 
 function sendPush(title, msg) {
     if (window.cordova && cordova.plugins.notification) {
         cordova.plugins.notification.local.schedule({
-            id: 1,
             title: title,
             text: msg,
             foreground: true,
