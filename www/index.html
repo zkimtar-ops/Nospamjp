@@ -2,55 +2,48 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: gap: content:; style-src * 'self' 'unsafe-inline'; script-src * 'self' 'unsafe-inline' 'unsafe-eval'; connect-src *;">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOS Japan Pro</title>
-    
     <style>
-        body { font-family: sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; text-align: center; direction: rtl; }
-        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h1 { color: #d32f2f; margin: 0 0 10px 0; font-size: 24px; }
-        #status-text { font-weight: bold; margin: 15px 0; color: #666; font-size: 14px; }
-        .list-container { background: white; border-radius: 15px; padding: 15px; text-align: right; min-height: 250px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .spam-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; align-items: center; }
-        .badge { background: #ff5252; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        .btn-setup { background: #1976d2; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; transition: background 0.3s; }
-        .btn-setup:active { background: #115293; }
-        .footer-note { font-size: 11px; color: #999; margin-top: 15px; }
+        body { font-family: sans-serif; background-color: #f4f4f9; text-align: center; padding: 20px; }
+        .setup-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 50px; }
+        .status-badge { padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        .btn-main { background-color: #007bff; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 18px; cursor: pointer; width: 100%; transition: 0.3s; }
+        .btn-main:disabled { background-color: #ccc; }
+        .instruction-box { background: #e7f3ff; padding: 15px; border-radius: 8px; text-align: right; margin-bottom: 20px; font-size: 14px; color: #004085; }
+        .spam-list { margin-top: 20px; text-align: right; max-height: 200px; overflow-y: auto; }
+        .spam-item { background: #fff; padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h1>SOS Japan Final Pro</h1>
-        <div id="status-text">جاري فحص الاتصال بالفيرباس...</div>
-        <button class="btn-setup" onclick="showSetupAlert()">تفعيل الحظر المباشر (مثل تروكولر)</button>
-        <p class="footer-note">يجب اختيار التطبيق كـ "Default" لضمان الحظر التلقائي</p>
-    </div>
-    <div style="padding: 20px;">
-    <button onclick="showDirectRoleRequest()" style="width:100%; padding:15px; margin-bottom:10px; background:#1976d2; color:white; border:none; border-radius:10px;">
-        تفعيل الحظر (نافذة مباشرة)
-    </button>
-    
-    <button onclick="openDefaultAppsSettings()" style="width:100%; padding:15px; background:#4caf50; color:white; border:none; border-radius:10px;">
-        فتح قائمة الإعدادات الافتراضية
-    </button>
-    </div>
+    <div id="main-app">
+        <h2>SOS Japan Pro 🚫</h2>
+        <div id="status-text" class="status-badge">جاري التحقق من الاتصال...</div>
 
-    <div class="list-container">
-        <h3 style="margin-top:0; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px;">الأرقام المحظورة 🇯🇵</h3>
-        <div id="list-content">
-            <p style="text-align:center; color:#999; padding-top: 20px;">جاري جلب القائمة المحدثة...</p>
+        <div id="setup-section" class="setup-card">
+            <h3>خطوات التفعيل</h3>
+            <div class="instruction-box">
+                1️⃣ وافق على شروط الاستخدام بالأسفل.<br>
+                2️⃣ اضغط "تفعيل الحظر المباشر".<br>
+                3️⃣ اختر <b>SOS Japan Pro</b> من القائمة التي ستظهر واضغط <b>Set as Default</b>.
+            </div>
+            
+            <label style="display: block; margin-bottom: 20px;">
+                <input type="checkbox" id="terms-check" onchange="toggleBtn()"> أوافق على شروط الاستخدام والخصوصية
+            </label>
+
+            <button id="activate-btn" class="btn-main" onclick="startActivation()" disabled>تفعيل الحظر المباشر</button>
+        </div>
+
+        <div class="spam-list" id="list-content">
+            <p style="text-align: center;">قائمة الأرقام المحظورة ستظهر هنا...</p>
         </div>
     </div>
 
     <script src="cordova.js"></script>
-
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="js/index.js"></script>
-
 </body>
 </html>
