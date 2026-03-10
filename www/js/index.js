@@ -11,47 +11,73 @@ const firebaseConfig = {
 };
 
 function onDeviceReady() {
+    // 1. تهيئة السلايدر
+    new Swiper('.swiper', { pagination: { el: '.swiper-pagination' } });
+
+    // 2. تهيئة Firebase
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 1. فحص الاتصال
-    db.ref(".info/connected").on("value", (snap) => {
-        document.getElementById('status-db').innerText = snap.val() ? "✅ قاعدة البيانات متصلة" : "❌ فشل الاتصال";
-    });
+    // 3. فحص هل التطبيق هو الافتراضي حالياً لإخفاء الزر
+    checkAppStatus();
 
-    // 2. طلب "كل" الأذونات دفعة واحدة عند التشغيل
-    requestAllPermissions();
+    // 4. إعادة الفحص عند العودة من الإعدادات
+    document.addEventListener("resume", checkAppStatus, false);
+
+    // 5. ربط البيانات (أرقام وتنبيهات)
+    syncData(db);
 }
 
-function requestAllPermissions() {
-    const permissions = cordova.plugins.permissions;
-    const list = [
-        permissions.READ_PHONE_STATE,
-        permissions.READ_CALL_LOG,
-        permissions.READ_PHONE_NUMBERS,
-        permissions.ANSWER_PHONE_CALLS,
-        permissions.POST_NOTIFICATIONS,
-        permissions.SYSTEM_ALERT_WINDOW
-    ];
-
-    permissions.requestPermissions(list, (status) => {
-        console.log("Permissions status:", status);
-    }, (err) => {
-        console.error("Error requesting permissions", err);
-    });
+function checkAppStatus() {
+    // نستخدم IntentShim لمحاولة طلب الدور؛ إذا لم تظهر نافذة، فالتطبيق مفعل
+    // في شاومي، الأفضل هو فحص الاستجابة بعد العودة
+    // سنقوم بإظهار صفحة التنبيهات إذا كان المستخدم قد ضغط الزر مسبقاً بنجاح
+    if(localStorage.getItem('activated') === 'true') {
+        document.getElementById('activate-btn').classList.add('hidden');
+        document.getElementById('guide-slider').classList.add('hidden');
+        document.getElementById('notif-page').style.display = 'block';
+    }
 }
 
-// الدالة التي طلبتها: تفتح صفحة الإعدادات لكل التطبيقات مباشرة
-function openDefaultApps() {
+function goToSettings() {
     if (window.plugins && window.plugins.intentShim) {
-        // نستخدم الأكشن MANAGE_DEFAULT_APPS_SETTINGS لفتح القائمة العامة
         window.plugins.intentShim.startActivity({
             action: "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
-        }, 
-        () => { console.log("Success: Opened Default Apps Settings"); }, 
-        (err) => { alert("خطأ في فتح الإعدادات: " + JSON.stringify(err)); }
-        );
-    } else {
-        alert("إضافة IntentShim غير مثبتة!");
+        }, () => {
+            localStorage.setItem('activated', 'true');
+        }, (err) => { alert("خطأ في فتح الإعدادات"); });
+    }
+}
+
+function syncData(db) {
+    // جلب الأرقام المحظورة
+    db.ref('spam_numbers').on('value', (snap) => {
+        const numbers = snap.val();
+        localStorage.setItem('blocked_list', JSON.stringify(numbers));
+    });
+
+    // جلب التنبيهات الجديدة وإرسال Push Notification
+    db.ref('alerts').on('child_added', (snap) => {
+        const alertData = snap.val();
+        renderAlert(alertData);
+        sendPush(alertData.title, alertData.message);
+    });
+}
+
+function renderAlert(data) {
+    const container = document.getElementById('list-content');
+    const html = `<div class="notif-card"><b>${data.title}</b><br><small>${data.message}</small></div>`;
+    container.innerHTML = html + container.innerHTML;
+}
+
+function sendPush(title, msg) {
+    if (window.cordova && cordova.plugins.notification) {
+        cordova.plugins.notification.local.schedule({
+            id: 1,
+            title: title,
+            text: msg,
+            foreground: true,
+            priority: 2
+        });
     }
 }
